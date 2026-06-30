@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ADINOR — Rasomuro MRK</title>
+
+  <!-- Configuración común (mensajes + bloqueo impresión) -->
+  <script>
+    window.ADINOR_CONFIG = { tituloModal: 'Adinor · Rasomuro MRK' };
+  </script>
+  <script src="https://jdurba.github.io/General/ConfigTodos.js?v=1"></script>
+
+
+
+  <!-- Tipografías -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500&family=Cormorant:ital,wght@0,300;1,300&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg:        #E5E5E3;
+      --ink:       #111111;
+      --ink-mid:   #555550;
+      --ink-light: #727270;
+      --rule:      rgba(0,0,0,0.11);
+      --hover-bg:  rgba(0,0,0,0.04);
+      --pad-x:     clamp(2rem, 6vw, 5rem);
+
+      /* Header oscuro */
+      --header-dark:   #2D3A4B;
+      --header-ink:    #FFFFFF;
+      --header-accent: #6B7FB8;
+
+      /* Paleta de tarjetas (reutilizable) */
+      --card-bg-idle:      #FFFFFF;
+      --card-bg-hover:     #F0F0EE;
+      --card-bg-selected:  #D4D4D3;
+      --card-bd-idle:      rgba(0,0,0,0.18);
+      --card-bd-hover:     #3a3a3a;
+      --card-bd-selected:  #111111;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Jost', sans-serif;
+      font-weight: 300;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ══════════════════════════════════════════
+       HEADER (replica vista-b del index)
+    ══════════════════════════════════════════ */
+    .rk-header {
+      background: var(--header-dark);
+      color: var(--header-ink);
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.3rem var(--pad-x);
+      min-height: 72px;
+    }
+    .rk-logo {
+      height: 58px;
+      width: auto;
+      display: block;
+    }
+    .rk-title {
+      text-align: center;
+      font-weight: 400;
+      font-size: clamp(1.25rem, 2.2vw, 1.6rem);
+      letter-spacing: 0.04em;
+      color: var(--header-ink);
+      opacity: 0.92;
+    }
+    .rk-back {
+      background: var(--header-accent);
+      color: #fff;
+      border: none;
+      padding: 0.55rem 1.1rem;
+      font-family: inherit;
+      font-weight: 400;
+      font-size: 0.82rem;
+      letter-spacing: 0.06em;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.22s ease, transform 0.22s ease;
+      white-space: nowrap;
+    }
+    .rk-back:hover {
+      background: #5a6ea8;
+      transform: translateX(-2px);
+    }
+
+    /* Acciones del header (form2) */
+    .rk-header-acciones {
+      display: flex;
+      gap: 0.55rem;
+      align-items: center;
+    }
+    .rk-header-btn {
+      background: var(--header-accent);
+      color: #fff;
+      border: none;
+      padding: 0.5rem 0.9rem;
+      font-family: inherit;
+      font-weight: 400;
+      font-size: 0.78rem;
+      letter-spacing: 0.04em;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.22s ease, transform 0.22s ease;
+      white-space: nowrap;
+    }
+    .rk-header-btn:hover {
+      background: #5a6ea8;
+    }
+
+    /* ══════════════════════════════════════════
+       CUERPO (rejilla 3 columnas, vista única)
+    ══════════════════════════════════════════ */
+    .rk-body {
+      flex: 1;
+      padding: clamp(1rem, 2vw, 1.5rem) var(--pad-x);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .rk-grupos {
+      display: grid;
+      grid-template-columns: 1fr 1.05fr 1.5fr;
+      grid-template-rows: auto auto auto;
+      gap: clamp(0.8rem, 1.6vw, 1.4rem) clamp(4.8rem, 10vw, 8rem);
+    }
+
+    /* Asignación de cada grupo a su celda */
+    .rk-grupo[data-grupo="ancho"]     { grid-column: 1; grid-row: 1; }
+    .rk-grupo[data-grupo="altura"]    { grid-column: 1; grid-row: 2; }
+    .rk-grupo[data-grupo="acabado"]   { grid-column: 1; grid-row: 3; }
+    .rk-grupo[data-grupo="tipo"]      { grid-column: 2; grid-row: 1; }
+    .rk-grupo[data-grupo="cierre"]    { grid-column: 2; grid-row: 2; }
+    .rk-grupo[data-grupo="cantidad"]  { grid-column: 2; grid-row: 3; }
+    .rk-grupo[data-grupo="apertura"]  { grid-column: 3; grid-row: 1 / span 3; }
+
+    /* Estilo base de un grupo */
+    .rk-grupo {
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+      min-width: 0;
+    }
+    .rk-grupo-titulo {
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-mid);
+      padding-bottom: 0.45rem;
+      border-bottom: 1px solid rgba(0,0,0,0.35);
+    }
+
+    /* Fila de cards (mini) */
+    .rk-cards-row {
+      display: grid;
+      gap: 0.45rem;
+    }
+    .rk-cards-row.cols-2 { grid-template-columns: repeat(2, 1fr); }
+    .rk-cards-row.cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .rk-cards-row.cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+    /* Card MINI (compacta) */
+    .rk-card {
+      position: relative;
+      background: var(--card-bg-idle);
+      border: 1.5px solid var(--card-bd-idle);
+      border-radius: 5px;
+      padding: 0.5rem 0.4rem;
+      cursor: pointer;
+      transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 0.82rem;
+      font-weight: 400;
+      letter-spacing: 0.03em;
+      color: var(--ink);
+      user-select: none;
+      min-height: 36px;
+      white-space: nowrap;
+    }
+    .rk-card:hover {
+      background: var(--card-bg-hover);
+      border-color: var(--card-bd-hover);
+    }
+    .rk-card.selected {
+      background: var(--card-bg-selected);
+      border-color: var(--card-bd-selected);
+      box-shadow: 0 0 0 1px var(--card-bd-selected) inset;
+    }
+    .rk-card input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Card de apertura (con imagen miniatura) */
+    .rk-card-apert {
+      flex-direction: column;
+      gap: 0.3rem;
+      padding: 0.5rem;
+      min-height: auto;
+    }
+    .rk-card-apert img {
+      width: 100%;
+      max-height: 60px;
+      object-fit: contain;
+      display: block;
+    }
+    .rk-card-apert span {
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* Input numérico libre (estilo coherente con card) */
+    .rk-input-libre {
+      background: var(--card-bg-idle);
+      border: 1.5px solid var(--card-bd-idle);
+      border-radius: 5px;
+      padding: 0.5rem 0.7rem;
+      font-family: inherit;
+      font-size: 0.85rem;
+      color: var(--ink);
+      width: 100%;
+      outline: none;
+      transition: border-color 0.18s ease, background 0.18s ease;
+    }
+    .rk-input-libre::placeholder {
+      color: var(--ink-light);
+      font-style: italic;
+      font-weight: 300;
+    }
+    .rk-input-libre:focus,
+    .rk-input-libre.filled {
+      border-color: var(--card-bd-selected);
+      background: var(--card-bg-selected);
+    }
+    .rk-input-libre.error {
+      border-color: #b3261e;
+      background: #fdecea;
+    }
+
+    /* Mensaje de error inline (rango fuera) */
+    .rk-error-msg {
+      font-size: 0.82rem;
+      color: #b3261e;
+      letter-spacing: 0.02em;
+      min-height: 1em;
+      margin-top: 0.15rem;
+    }
+
+    /* Campo calculado (readonly) — más compacto */
+    .rk-calc {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+      margin-top: 0.2rem;
+    }
+    .rk-calc-label {
+      font-size: 0.68rem;
+      font-weight: 400;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-mid);
+      white-space: nowrap;
+    }
+    .rk-calc-input {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid rgba(0,0,0,0.25);
+      padding: 0.15rem 0.2rem;
+      font-family: inherit;
+      font-size: 0.85rem;
+      color: var(--ink-light);
+      width: 90px;
+      outline: none;
+      transition: border-color 0.22s ease, color 0.22s ease;
+    }
+    .rk-calc-input.filled {
+      color: var(--ink);
+      border-bottom-color: var(--ink);
+    }
+    .rk-calc-input.sin-borde,
+    .rk-calc-input.sin-borde.filled {
+      border-bottom: none;
+    }
+
+    /* Chips de acabado (Blanco/Negro) */
+    .rk-chips {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .rk-chip {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.4rem;
+      background: var(--card-bg-idle);
+      border: 1.5px solid var(--card-bd-idle);
+      border-radius: 5px;
+      cursor: pointer;
+      transition: border-color 0.18s ease, background 0.18s ease;
+      font-size: 0.82rem;
+      font-weight: 400;
+      letter-spacing: 0.03em;
+      color: var(--ink);
+      user-select: none;
+      min-height: 36px;
+    }
+    .rk-chip:hover {
+      border-color: var(--card-bd-hover);
+      background: var(--card-bg-hover);
+    }
+    .rk-chip.selected {
+      border-color: var(--card-bd-selected);
+      background: var(--card-bg-selected);
+      box-shadow: 0 0 0 1px var(--card-bd-selected) inset;
+    }
+    .rk-chip-swatch {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      border: 1px solid rgba(0,0,0,0.25);
+      flex-shrink: 0;
+    }
+    .rk-chip-swatch.blanco { background: #FFFFFF; }
+    .rk-chip-swatch.negro  { background: #1a1a1a; border-color: rgba(0,0,0,0.4); }
+    .rk-chip-swatch.plata  { background: linear-gradient(135deg, #d8d8d8 0%, #b0b0b0 50%, #d8d8d8 100%); }
+    .rk-chip input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Grupo apertura: cards arriba + dibujo grande debajo */
+    .rk-apertura-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+    .rk-apertura-dibujo {
+      min-height: 140px;
+      background: var(--card-bg-idle);
+      border: 1px solid var(--card-bd-idle);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem;
+      overflow: hidden;
+    }
+    .rk-apertura-dibujo img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .rk-flip {
+      transform: scaleX(-1);
+    }
+
+    /* Cantidad puertas: input pequeño */
+    .rk-cantidad-input {
+      width: 80px;
+      text-align: center;
+    }
+
+    /* Zona de acciones del form1 (dentro del flujo, no en footer) */
+    .rk-form-acciones {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 1rem;
+      margin-top: clamp(1rem, 2vw, 1.6rem);
+      padding-top: clamp(0.8rem, 1.5vw, 1.2rem);
+      border-top: 1px solid rgba(0,0,0,0.18);
+    }
+    .rk-form-acciones .rk-hint {
+      margin-right: auto;
+    }
+
+    /* ══════════════════════════════════════════
+       FORM2 — Resumen
+    ══════════════════════════════════════════ */
+    #form2 {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .rk-resumen {
+      display: grid;
+      grid-template-columns: 1fr 1.4fr 1fr;
+      gap: clamp(1.5rem, 3vw, 3rem);
+      align-items: stretch;
+      height: 100%;
+    }
+    .rk-resumen .rk-img-card {
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+    }
+    .rk-resumen .rk-img-card .rk-img-frame {
+      flex: 1;
+      min-height: 0;
+    }
+    .rk-resumen .rk-img-card .rk-img-frame img {
+      max-height: 100%;
+      max-width: 100%;
+      width: auto;
+    }
+
+    /* Frame que contiene el wrapper de cotas: flex centrado, ocupa el grid */
+    .rk-resumen .rk-img-card .rk-img-frame:has(.rk-cota-wrap) {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      min-height: 0;
+    }
+
+    /* Contenedor de cotas: dimensionado por ancho (no por alto del frame),
+       así no se descuadra cuando el frame es muy alto. Escala con zoom (rem). */
+    .rk-cota-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 28rem;
+      aspect-ratio: var(--combo-ratio, 1);
+      container-type: inline-size;
+    }
+    .rk-cota-wrap img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    /* La imagen es la que rota; las cotas quedan fuera del scaleX */
+    .rk-cota-wrap.rk-flip { transform: none; }
+    .rk-cota-wrap.rk-flip img { transform: scaleX(-1); }
+
+    .rk-cota {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      font-size: 4cqw;
+      font-weight: 400;
+      color: var(--ink);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .rk-resumen-bloque {
+      display: flex;
+      flex-direction: column;
+      gap: 2.4rem;
+    }
+
+    .rk-resumen-titulo {
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-mid);
+      padding-bottom: 0.45rem;
+      border-bottom: 1px solid rgba(0,0,0,0.35);
+    }
+
+    /* Tabla de datos (selecciones) */
+    /* Bloque "Parámetros seleccionados": dos sub-columnas con separador sutil */
+    .rk-datos {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) 1px minmax(0, 1fr);
+      gap: 0 1.6rem;
+      font-size: 0.92rem;
+      margin-top: 1rem;          /* aire bajo la cabecera del bloque */
+    }
+    .rk-datos-col {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      column-gap: 1.2rem;
+      row-gap: 0.35rem;
+      align-content: start;
+    }
+    .rk-datos-sep {
+      background: rgba(0,0,0,0.12);
+      width: 1px;
+      align-self: stretch;
+    }
+    /* Fila espaciadora entre mini-bloques temáticos */
+    .rk-datos-spacer {
+      grid-column: 1 / -1;
+      height: 0.65rem;
+    }
+    .rk-datos-label {
+      color: var(--ink-mid);
+      letter-spacing: 0.04em;
+      white-space: nowrap;        /* evita que "Acabado herraje" salte de línea */
+    }
+    .rk-datos-valor {
+      color: var(--ink);
+      font-weight: 400;
+    }
+    .rk-datos-valor.con-swatch {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    /* Contenedor de la imagen de apertura: ocupa toda la subcolumna */
+    .rk-datos-imagen {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 0.8rem;
+      min-height: 0;
+    }
+    .rk-apert-img {
+      display: block;
+      max-width: 100%;
+      max-height: 11rem;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+    }
+    .rk-apert-img.izq {
+      transform: scaleX(-1);
+    }
+
+    /* Tabla de códigos */
+    .rk-codigos {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      margin-top: 1rem;
+    }
+    .rk-codigo-linea {
+      display: grid;
+      grid-template-columns: 2.5rem 1fr;
+      grid-template-rows: auto auto;
+      align-items: baseline;
+      gap: 0.15rem 0.8rem;
+      padding: 0.6rem 0.8rem;
+      background: rgba(0,0,0,0.04);
+      border-left: 2px solid var(--card-bd-selected);
+      border-radius: 3px;
+    }
+    .rk-codigo-cant {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+      align-self: center;
+      font-weight: 500;
+      color: var(--ink);
+      text-align: right;
+      font-size: 1.05rem;
+    }
+    .rk-codigo-code {
+      grid-column: 2;
+      grid-row: 1;
+      font-family: 'Courier New', monospace;
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--ink);
+      letter-spacing: 0.02em;
+    }
+    .rk-codigo-desc {
+      grid-column: 2;
+      grid-row: 2;
+      color: var(--ink-mid);
+      font-size: 0.85rem;
+      letter-spacing: 0.02em;
+      line-height: 1.35;
+    }
+
+    /* Imágenes */
+    .rk-img-card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .rk-img-caption {
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink-mid);
+    }
+    .rk-img-frame {
+      background: var(--card-bg-idle);
+      border: 1px solid var(--card-bd-idle);
+      border-radius: 5px;
+      padding: 0.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .rk-img-frame img {
+      width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    /* Botón secundario (Modificar / Atrás) */
+    .rk-btn-sec {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--ink);
+      padding: 0.55rem 1.3rem;
+      font-family: inherit;
+      font-weight: 400;
+      font-size: 0.82rem;
+      letter-spacing: 0.1em;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background 0.22s ease, color 0.22s ease, transform 0.22s ease;
+    }
+    .rk-btn-sec:hover {
+      background: var(--ink);
+      color: #fff;
+      transform: translateX(-2px);
+    }
+
+    /* ══════════════════════════════════════════
+       FOOTER (acciones)
+    ══════════════════════════════════════════ */
+    .rk-footer {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 0.7rem var(--pad-x);
+      border-top: 1px solid rgba(0,0,0,0.25);
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .rk-hint {
+      font-family: 'Cormorant', serif;
+      font-style: italic;
+      font-size: 1rem;
+      color: var(--ink-mid);
+      margin-right: auto;
+    }
+    .rk-btn {
+      background: #4a4a4a;
+      color: #fff;
+      border: none;
+      padding: 0.55rem 1.3rem;
+      font-family: inherit;
+      font-weight: 400;
+      font-size: 0.82rem;
+      letter-spacing: 0.1em;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background 0.22s ease, transform 0.22s ease;
+    }
+    .rk-btn:hover:not(:disabled) {
+      background: #111111;
+      transform: translateX(2px);
+    }
+    .rk-btn:disabled {
+      background: #b8b8b6;
+      cursor: not-allowed;
+    }
+
+    /* ══════════════════════════════════════════
+       RESPONSIVE
+    ══════════════════════════════════════════ */
+    @media (max-width: 980px) {
+      .rk-grupos {
+        grid-template-columns: 1fr 1fr;
+      }
+      .rk-grupo[data-grupo="ancho"]     { grid-column: 1; grid-row: 1; }
+      .rk-grupo[data-grupo="altura"]    { grid-column: 2; grid-row: 1; }
+      .rk-grupo[data-grupo="tipo"]      { grid-column: 1; grid-row: 2; }
+      .rk-grupo[data-grupo="cierre"]    { grid-column: 2; grid-row: 2; }
+      .rk-grupo[data-grupo="acabado"]   { grid-column: 1; grid-row: 3; }
+      .rk-grupo[data-grupo="cantidad"]  { grid-column: 2; grid-row: 3; }
+      .rk-grupo[data-grupo="apertura"]  { grid-column: 1 / -1; grid-row: 4; }
+      .rk-apertura-dibujo { min-height: 160px; }
+
+      .rk-resumen {
+        grid-template-columns: 1fr 1fr;
+      }
+      .rk-resumen > .rk-resumen-bloque {
+        grid-column: 1 / -1;
+        order: -1;
+      }
+    }
+    @media (max-width: 700px) {
+      .rk-header {
+        grid-template-columns: auto auto;
+        grid-template-rows: auto auto;
+      }
+      .rk-title {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        text-align: left;
+      }
+      .rk-grupos { grid-template-columns: 1fr; }
+      .rk-grupo  { grid-column: 1 !important; }
+      .rk-resumen { grid-template-columns: 1fr; }
+      .rk-resumen > .rk-resumen-bloque { grid-column: 1; order: -1; }
+    }
+    @media (max-width: 420px) {
+      .rk-footer { flex-direction: column; align-items: stretch; }
+      .rk-btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       HEADER · Form1 (configuración)
+  ══════════════════════════════════════════════════════════════ -->
+  <header class="rk-header" id="header1">
+    <img class="rk-logo"
+         src="https://jdurba.github.io/General/img/LogoAdinorBlanco.png"
+         alt="ADINOR" />
+    <div class="rk-title">Rasomuro MRK</div>
+    <button type="button" class="rk-back" onclick="volverAlMenu()">← Volver al menú</button>
+  </header>
+
+
+  <!-- ══════════════════════════════════════════════════════════════
+       FORM1 — Captación de datos (vacío, listo para añadir grupos)
+  ══════════════════════════════════════════════════════════════ -->
+  <form id="form1" class="rk-body" autocomplete="off" onsubmit="return false;">
+
+    <div class="rk-grupos" id="rk-grupos">
+
+      <!-- ─────────────────────────────────────────────
+           ANCHO DE PUERTA
+      ───────────────────────────────────────────── -->
+      <div class="rk-grupo" data-grupo="ancho">
+        <div class="rk-grupo-titulo">Ancho de puerta</div>
+        <input type="number" id="anchoLibre" class="rk-input-libre"
+               min="600" max="1100" step="1"
+               placeholder="medida (600 — 1100)">
+        <div class="rk-error-msg" id="anchoError"></div>
+        <div class="rk-calc">
+          <span class="rk-calc-label">Ancho luz de obra</span>
+          <input type="text" id="anchoLuzObra" class="rk-calc-input sin-borde" readonly placeholder="—">
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────────────
+           ALTURA DE PUERTA
+      ───────────────────────────────────────────── -->
+      <div class="rk-grupo" data-grupo="altura">
+        <div class="rk-grupo-titulo">Altura de puerta</div>
+        <div class="rk-cards-row cols-2" role="radiogroup" aria-label="Altura de puerta">
+          <label class="rk-card" data-valor="2030">
+            <input type="radio" name="alturaPuerta" value="2030">2030
+          </label>
+          <label class="rk-card" data-valor="2110">
+            <input type="radio" name="alturaPuerta" value="2110">2110
+          </label>
+        </div>
+        <input type="number" id="alturaLibre" class="rk-input-libre"
+               min="2111" max="3000" step="1"
+               placeholder="o medida (2111 — 3000)">
+        <div class="rk-error-msg" id="alturaError"></div>
+        <div class="rk-calc">
+          <span class="rk-calc-label">Alto luz de obra</span>
+          <input type="text" id="alturaLuzObra" class="rk-calc-input sin-borde" readonly placeholder="—">
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────────────
+           TIPO RASOMURO
+      ───────────────────────────────────────────── -->
+      <div class="rk-grupo" data-grupo="tipo">
+        <div class="rk-grupo-titulo">Tipo de cabecero</div>
+        <div class="rk-cards-row cols-3" role="radiogroup" aria-label="Tipo de cabecero">
+          <label class="rk-card" data-valor="recto">
+            <input type="radio" name="tipoRasomuro" value="recto">Recto
+          </label>
+          <label class="rk-card" data-valor="escalon">
+            <input type="radio" name="tipoRasomuro" value="escalon">Escalón
+          </label>
+          <label class="rk-card" data-valor="sincabecero">
+            <input type="radio" name="tipoRasomuro" value="sincabecero">Sin cabecero
+          </label>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────────────
+           MODELO DE CIERRE
+      ───────────────────────────────────────────── -->
+      <div class="rk-grupo" data-grupo="cierre">
+        <div class="rk-grupo-titulo">Modelo de cierre</div>
+        <div class="rk-cards-row cols-2" role="radiogroup" aria-label="Modelo de cierre">
+          <label class="rk-card" data-valor="condena">
+            <input type="radio" name="cierre" value="condena">Condena
+          </label>
+          <label class="rk-card" data-valor="bombillo">
+            <input type="radio" name="cierre" value="bombillo">Bombillo
+          </label>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────────────
+           ACABADO (cerradura + bisagras unificado)
+      ───────────────────────────────────────────── -->
+      <div class="rk-grupo" data-grupo="acabado">
+        <div class="rk-grupo-titulo">Acabado (cerradura y bisagras)</div>
+        <div class="rk-chips" role="radiogroup" aria-label="Acabado">
+          <label class="rk-chip" data-valor="blanco">
+            <input type="radio" name="acabado" value="blanco">
+            <span class="rk-chip-swatch blanco"></span>Blanco
+          </label>
+          <label class="rk-chip" data-valor="negro">
+            <input type="radio" name="acabado" value="negro">
+            <span class="rk-chip-swatch negro"></span>Negro
+          </label>
+          <label class="rk-chip" data-valor="plata">
+            <input type="radio" name="acabado" value="plata">
+            <span class="rk-chip-swatch plata"></span>Plata
+          </label>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────────────
+           CANTIDAD DE PUERTAS
+      ───────────────────────────────────────────── -->
+      <div class="rk-grupo" data-grupo="cantidad">
+        <div class="rk-grupo-titulo">Cantidad de puertas</div>
+        <input type="number" id="cantidadPuertas"
+               class="rk-input-libre rk-cantidad-input"
+               min="1" max="20" step="1" placeholder="—">
+      </div>
+
+      <!-- ─────────────────────────────────────────────
+           MODELO DE APERTURA (con dibujo dinámico)
+      ───────────────────────────────────────────── -->
+      <div class="rk-grupo" data-grupo="apertura">
+        <div class="rk-grupo-titulo">Modelo de apertura</div>
+        <div class="rk-apertura-cards" role="radiogroup" aria-label="Modelo de apertura">
+          <label class="rk-card rk-card-apert" data-valor="izquierda">
+            <input type="radio" name="apertura" value="izquierda">
+            <span>Izquierda</span>
+          </label>
+          <label class="rk-card rk-card-apert" data-valor="derecha">
+            <input type="radio" name="apertura" value="derecha">
+            <span>Derecha</span>
+          </label>
+        </div>
+        <div class="rk-apertura-dibujo" id="aperturaDibujo"></div>
+      </div>
+
+    </div>
+
+    <div class="rk-form-acciones">
+      <span class="rk-hint">Completa la configuración para continuar</span>
+      <button type="button" class="rk-btn" id="btnSiguiente" disabled>
+        Siguiente →
+      </button>
+    </div>
+
+  </form>
+
+
+  <!-- ══════════════════════════════════════════════════════════════
+       JAVASCRIPT (solo captura form1)
+  ══════════════════════════════════════════════════════════════ -->
+  <script>
+    // ═══════════════════════════════════════════════════════════════
+    // ESTADO DEL CONFIGURADOR
+    // ═══════════════════════════════════════════════════════════════
+    const config = {
+      anchoPuerta:    null,
+      anchoLuzObra:   null,
+      alturaPuerta:   null,
+      alturaLuzObra:  null,
+      tipoRasomuro:   null,
+      cierre:         null,
+      acabado:        null,
+      cantidadPuertas:null,
+      apertura:       null
+    };
+
+    const HOLGURA_ANCHO = 75;  // mm — ancho luz obra = ancho puerta + 75 (fijo)
+    const HOLGURA_ALTO  = {    // mm — alto luz obra = alto puerta + holgura según cabecero
+      recto:       45,
+      escalon:     42,
+      sincabecero: 10
+    };
+
+    // Imagen base de apertura (servida desde GitHub Pages)
+    // La 'izquierda' es la misma imagen volteada con CSS (scaleX -1)
+    const IMG_APERTURA_BASE    = 'https://jdurba.github.io/Rasomuro02/Img/AperturaDer.png';
+    const IMG_APERTURA_NEUTRA  = 'https://jdurba.github.io/Rasomuro02/Img/AperturaNeutra.png';
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // HELPERS
+    // ═══════════════════════════════════════════════════════════════
+    function marcarUnica(cards, cardElegida) {
+      cards.forEach(c => c.classList.remove('selected'));
+      cardElegida.classList.add('selected');
+      const radio = cardElegida.querySelector('input[type="radio"]');
+      if (radio) radio.checked = true;
+    }
+
+    function escribirCalc(input, valor) {
+      if (valor == null) {
+        input.value = '';
+        input.classList.remove('filled');
+      } else {
+        input.value = valor + ' mm';
+        input.classList.add('filled');
+      }
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // ANCHO DE PUERTA (input libre 600–1100; el kit es recortable,
+    // la medida solo informa luz de obra y cortes)
+    // ═══════════════════════════════════════════════════════════════
+    (function () {
+      const inputLibre = document.getElementById('anchoLibre');
+      const inputLuz   = document.getElementById('anchoLuzObra');
+      const errorMsg   = document.getElementById('anchoError');
+
+      function aplicar(ancho) {
+        config.anchoPuerta  = ancho;
+        config.anchoLuzObra = (ancho != null) ? ancho + HOLGURA_ANCHO : null;
+        escribirCalc(inputLuz, config.anchoLuzObra);
+        validarConfig();
+      }
+
+      // Mientras teclea: limpieza ligera, sin validar rango aún
+      inputLibre.addEventListener('input', () => {
+        inputLibre.classList.remove('error');
+        errorMsg.textContent = '';
+        if (inputLibre.value.trim() === '') {
+          inputLibre.classList.remove('filled');
+          aplicar(null);
+        }
+      });
+
+      // Al confirmar (Enter o blur): validar rango
+      function validarRango() {
+        const txt = inputLibre.value.trim();
+        if (txt === '') { aplicar(null); return; }
+
+        const v = parseInt(txt, 10);
+        if (isNaN(v) || v < 600 || v > 1100) {
+          inputLibre.classList.remove('filled');
+          inputLibre.classList.add('error');
+          errorMsg.textContent = 'Fuera de rango — admitido: 600 a 1100 mm';
+          aplicar(null);
+        } else {
+          inputLibre.classList.remove('error');
+          inputLibre.classList.add('filled');
+          errorMsg.textContent = '';
+          aplicar(v);
+        }
+      }
+
+      inputLibre.addEventListener('change', validarRango);
+      inputLibre.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); validarRango(); }
+      });
+    })();
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // ALTURA DE PUERTA (2 cards + input libre, excluyentes)
+    // ═══════════════════════════════════════════════════════════════
+    // Depende de alturaPuerta + tipoRasomuro. Solo calcula si ambos están definidos.
+    function recalcularAlturaLuz() {
+      const inputLuz = document.getElementById('alturaLuzObra');
+      const altura   = config.alturaPuerta;
+      const tipo     = config.tipoRasomuro;
+      config.alturaLuzObra = (altura && tipo) ? altura + HOLGURA_ALTO[tipo] : null;
+      escribirCalc(inputLuz, config.alturaLuzObra);
+    }
+
+    (function () {
+      const cards      = document.querySelectorAll('.rk-grupo[data-grupo="altura"] .rk-card');
+      const inputLibre = document.getElementById('alturaLibre');
+      const errorMsg   = document.getElementById('alturaError');
+
+      function aplicar(altura) {
+        config.alturaPuerta = altura;
+        recalcularAlturaLuz();
+        validarConfig();
+      }
+
+      cards.forEach(card => {
+        card.addEventListener('click', (e) => {
+          e.preventDefault();
+          marcarUnica(cards, card);
+          inputLibre.value = '';
+          inputLibre.classList.remove('filled', 'error');
+          errorMsg.textContent = '';
+          aplicar(parseInt(card.dataset.valor, 10));
+        });
+      });
+
+      // Mientras teclea: limpieza ligera (sin validar rango aún)
+      inputLibre.addEventListener('input', () => {
+        cards.forEach(c => c.classList.remove('selected'));
+        cards.forEach(c => { const r = c.querySelector('input'); if (r) r.checked = false; });
+        inputLibre.classList.remove('error');
+        errorMsg.textContent = '';
+
+        // Si vacía el campo, anula también la altura aplicada
+        if (inputLibre.value.trim() === '') {
+          inputLibre.classList.remove('filled');
+          aplicar(null);
+        }
+      });
+
+      // Al confirmar (Enter o salir del campo): validar rango
+      function validarRango() {
+        const txt = inputLibre.value.trim();
+        if (txt === '') return;  // ya gestionado en 'input'
+
+        const v = parseInt(txt, 10);
+        if (isNaN(v) || v < 2111 || v > 3000) {
+          inputLibre.classList.remove('filled');
+          inputLibre.classList.add('error');
+          errorMsg.textContent = 'Fuera de rango — admitido: 2111 a 3000 mm';
+          aplicar(null);
+        } else {
+          inputLibre.classList.remove('error');
+          inputLibre.classList.add('filled');
+          errorMsg.textContent = '';
+          aplicar(v);
+        }
+      }
+
+      inputLibre.addEventListener('change', validarRango);  // blur o Enter
+      inputLibre.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          validarRango();
+        }
+      });
+    })();
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // SELECTORES SIMPLES (tipo / cierre)
+    // ═══════════════════════════════════════════════════════════════
+    function inicSelectorSimple(grupo, key) {
+      const cards = document.querySelectorAll(`.rk-grupo[data-grupo="${grupo}"] .rk-card`);
+      cards.forEach(card => {
+        card.addEventListener('click', (e) => {
+          e.preventDefault();
+          marcarUnica(cards, card);
+          config[key] = card.dataset.valor;
+          validarConfig();
+        });
+      });
+    }
+    inicSelectorSimple('tipo',   'tipoRasomuro');
+    inicSelectorSimple('cierre', 'cierre');
+
+    // Cuando cambia el tipo de cabecero, recalcular altura luz obra
+    document.querySelectorAll('.rk-grupo[data-grupo="tipo"] .rk-card')
+      .forEach(card => card.addEventListener('click', recalcularAlturaLuz));
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // ACABADO (chips)
+    // ═══════════════════════════════════════════════════════════════
+    (function () {
+      const chips = document.querySelectorAll('.rk-grupo[data-grupo="acabado"] .rk-chip');
+      chips.forEach(chip => {
+        chip.addEventListener('click', (e) => {
+          e.preventDefault();
+          chips.forEach(c => c.classList.remove('selected'));
+          chip.classList.add('selected');
+          const radio = chip.querySelector('input[type="radio"]');
+          if (radio) radio.checked = true;
+          config.acabado = chip.dataset.valor;
+          validarConfig();
+        });
+      });
+    })();
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // CANTIDAD DE PUERTAS
+    // ═══════════════════════════════════════════════════════════════
+    (function () {
+      const input = document.getElementById('cantidadPuertas');
+      input.addEventListener('input', () => {
+        const v = parseInt(input.value, 10);
+        if (!isNaN(v) && v >= 1 && v <= 20) {
+          input.classList.add('filled');
+          config.cantidadPuertas = v;
+        } else {
+          input.classList.remove('filled');
+          config.cantidadPuertas = null;
+        }
+        validarConfig();
+      });
+    })();
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // MODELO DE APERTURA (cambia dibujo dinámico)
+    // ═══════════════════════════════════════════════════════════════
+    (function () {
+      const cards  = document.querySelectorAll('.rk-grupo[data-grupo="apertura"] .rk-card');
+      const dibujo = document.getElementById('aperturaDibujo');
+
+      cards.forEach(card => {
+        card.addEventListener('click', (e) => {
+          e.preventDefault();
+          marcarUnica(cards, card);
+          const valor = card.dataset.valor;
+          config.apertura = valor;
+          const flip = (valor === 'izquierda') ? ' rk-flip' : '';
+          dibujo.innerHTML = `<img class="${flip.trim()}" src="${IMG_APERTURA_BASE}" alt="Apertura ${valor}">`;
+          validarConfig();
+        });
+      });
+    })();
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // VALIDACIÓN GENERAL → habilita el botón Siguiente
+    // ═══════════════════════════════════════════════════════════════
+    function validarConfig() {
+      const completo =
+        config.anchoPuerta     != null &&
+        config.alturaPuerta    != null &&
+        config.tipoRasomuro    != null &&
+        config.cierre          != null &&
+        config.acabado         != null &&
+        config.cantidadPuertas != null &&
+        config.apertura        != null;
+      document.getElementById('btnSiguiente').disabled = !completo;
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // NAVEGACIÓN / ARRANQUE (form1 únicamente, por ahora)
+    // ═══════════════════════════════════════════════════════════════
+    function pintarAperturaNeutra() {
+      document.getElementById('aperturaDibujo').innerHTML =
+        `<img src="${IMG_APERTURA_NEUTRA}" alt="Apertura">`;
+    }
+
+    // El botón Siguiente aún no navega: form2 pendiente de desarrollo.
+    document.getElementById('btnSiguiente').addEventListener('click', () => {
+      // TODO: navegación a form2 cuando exista.
+      console.log('config MRK:', JSON.parse(JSON.stringify(config)));
+    });
+
+    // Estado inicial
+    pintarAperturaNeutra();
+
+  </script>
+
+</body>
+</html>
