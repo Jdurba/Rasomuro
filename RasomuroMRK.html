@@ -10,6 +10,8 @@
     window.ADINOR_CONFIG = { tituloModal: 'Adinor · Rasomuro MRK' };
   </script>
   <script src="https://jdurba.github.io/General/ConfigTodos.js?v=1"></script>
+  <script src="https://jdurba.github.io/General/jspdf.umd.min.js"></script>
+  <script src="https://jdurba.github.io/General/html2canvas.min.js"></script>
 
 
 
@@ -137,7 +139,7 @@
 
     .rk-grupos {
       display: grid;
-      grid-template-columns: 1fr 1.05fr 1.5fr;
+      grid-template-columns: 1fr 1.05fr;
       grid-template-rows: auto auto auto;
       gap: clamp(0.8rem, 1.6vw, 1.4rem) clamp(4.8rem, 10vw, 8rem);
     }
@@ -149,7 +151,7 @@
     .rk-grupo[data-grupo="tipo"]      { grid-column: 2; grid-row: 1; }
     .rk-grupo[data-grupo="cierre"]    { grid-column: 2; grid-row: 2; }
     .rk-grupo[data-grupo="cantidad"]  { grid-column: 2; grid-row: 3; }
-    .rk-grupo[data-grupo="apertura"]  { grid-column: 3; grid-row: 1 / span 3; }
+    /* apertura: sin celda asignada; grupo oculto en MRK (display:none) */
 
     /* Estilo base de un grupo */
     .rk-grupo {
@@ -349,6 +351,7 @@
     .rk-chip-swatch.blanco { background: #FFFFFF; }
     .rk-chip-swatch.negro  { background: #1a1a1a; border-color: rgba(0,0,0,0.4); }
     .rk-chip-swatch.plata  { background: linear-gradient(135deg, #d8d8d8 0%, #b0b0b0 50%, #d8d8d8 100%); }
+    .rk-chip-swatch.bronce { background: linear-gradient(135deg, #b08d57 0%, #7d5a2b 50%, #b08d57 100%); border-color: rgba(0,0,0,0.3); }
     .rk-chip input[type="radio"] {
       position: absolute;
       opacity: 0;
@@ -726,6 +729,128 @@
       .rk-footer { flex-direction: column; align-items: stretch; }
       .rk-btn { width: 100%; }
     }
+
+    /* ═══════════════════════════════════════════
+       INFORME MRK (form2) — HOJA A4 (lenguaje ecosistema)
+    ═══════════════════════════════════════════ */
+
+    /* Barra fija de acciones (banda oscura superior) */
+    #barra-informe {
+      display: none;
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      background: #2D3A4B;
+      height: 72px; padding: 0 28px;
+      align-items: center; gap: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+    #barra-informe.visible { display: flex; }
+    #barra-informe .barra-logo { height: 46px; width: auto; margin-right: auto; }
+    #barra-informe button {
+      min-width: 115px; padding: 9px 16px;
+      font-family: 'Jost', sans-serif; font-size: 0.85rem;
+      color: #fff; background: #4a5b7a; border: none; border-radius: 4px;
+      cursor: pointer; transition: background 0.2s ease, transform 0.2s ease;
+      letter-spacing: 0.03em;
+    }
+    #barra-informe button:hover { background: #5a6ea8; transform: translateX(2px); }
+
+    /* Fondo gris cuando el informe está activo */
+    body.informe-activo { background: #e4e5e3; }
+    body.informe-activo header#header1 { display: none; }
+
+    /* Hoja A4 */
+    #form2 {
+      display: none;
+      padding: 90px 0 40px;   /* deja hueco para la barra fija */
+    }
+    #informe-container {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 18mm 16mm;
+      box-sizing: border-box;
+      background: #ffffff;
+      box-shadow: 0 3px 16px rgba(0,0,0,0.18);
+      color: #222;
+      font-family: 'Jost', sans-serif;
+    }
+
+    /* Cabecera del informe */
+    .informe-header { border-bottom: 2px solid #2D3A4B; padding-bottom: 12px; margin-bottom: 22px; }
+    .informe-header-top { display: flex; align-items: center; gap: 16px; }
+    .informe-header-logo {
+      height: 54px;          /* logo PNG completo (símbolo + tagline) */
+      width: auto;
+      flex-shrink: 0;
+    }
+    .informe-header h1 {
+      flex: 1; margin: 0; text-align: center;
+      font-family: 'Jost', sans-serif; font-weight: 600;
+      font-size: 20px; letter-spacing: 0.5px; text-transform: uppercase;
+      color: #2D3A4B; line-height: 1.2;
+    }
+    .informe-fecha { font-size: 11px; color: #888; white-space: nowrap; }
+
+    /* Bloques */
+    .bloque-titulo {
+      background: #d7d8d6; border: 1.5px solid #b7b8b6;
+      padding: 7px 16px; border-radius: 4px;
+      font-weight: 600; font-size: 12px; letter-spacing: 0.06em;
+      text-transform: uppercase; color: #333;
+      margin: 22px 0 14px;
+    }
+
+    /* Parámetros — etiqueta izq / valor der, filas agrupadas */
+    .mrk-params { display: flex; flex-direction: column; gap: 0; padding: 0 4px; }
+    .mrk-param-fila { display: grid; gap: 0 clamp(2rem, 6vw, 5rem); }
+    .mrk-param-fila.cols-2 { grid-template-columns: 1fr 1fr; }
+    .mrk-param-fila.cols-3 { grid-template-columns: 1fr 1fr 1fr; margin-top: 22px; }
+    .mrk-param-fila.cols-1 { grid-template-columns: 1fr 1fr 1fr; }  /* misma rejilla que cols-3; Cantidad usa solo la 1ª columna */
+    .campo-informe {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 12px; padding: 7px 2px;
+      border-bottom: 1px dotted #bbb;
+    }
+    .campo-informe label {
+      font-weight: bold; font-size: 12px; color: #555;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .campo-informe .valor {
+      font-size: 13px; font-weight: 300; color: #222; text-align: right;
+    }
+
+    /* Tabla de artículos (estilo ecosistema) */
+    .tabla-informe {
+      width: 100%; border-collapse: collapse; margin-top: 6px;
+    }
+    .tabla-informe th, .tabla-informe td {
+      border: 1px solid #333; padding: 8px 10px; font-size: 12px;
+    }
+    .tabla-informe th {
+      background: #ddd; font-weight: bold; text-align: left;
+      letter-spacing: 0.04em;
+    }
+    .tabla-informe td.cod { font-weight: 600; white-space: nowrap; }
+    .tabla-informe th.num, .tabla-informe td.num { text-align: right; }
+    .tabla-informe .incluido { color: #999; font-style: italic; }
+    .tabla-informe tfoot td {
+      border: none; border-top: 2px solid #2D3A4B;
+      font-weight: bold; font-size: 14px; padding-top: 12px;
+    }
+
+    .informe-version {
+      margin-top: 18px; text-align: right;
+      font-size: 9px; color: #aaa;
+    }
+
+    /* Forzar colores en PDF/impresión */
+    #informe-container * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    @media (max-width: 800px) {
+      #informe-container { width: 100%; min-height: 0; padding: 24px 18px; }
+    }
   </style>
 </head>
 <body>
@@ -755,8 +880,8 @@
       <div class="rk-grupo" data-grupo="ancho">
         <div class="rk-grupo-titulo">Ancho de puerta</div>
         <input type="number" id="anchoLibre" class="rk-input-libre"
-               min="600" max="1100" step="1"
-               placeholder="medida (600 — 1100)">
+               min="550" max="1025" step="1"
+               placeholder="medida (550 — 1025)">
         <div class="rk-error-msg" id="anchoError"></div>
         <div class="rk-calc">
           <span class="rk-calc-label">Ancho luz de obra</span>
@@ -792,15 +917,12 @@
       ───────────────────────────────────────────── -->
       <div class="rk-grupo" data-grupo="tipo">
         <div class="rk-grupo-titulo">Tipo de cabecero</div>
-        <div class="rk-cards-row cols-3" role="radiogroup" aria-label="Tipo de cabecero">
+        <div class="rk-cards-row cols-2" role="radiogroup" aria-label="Tipo de cabecero">
           <label class="rk-card" data-valor="recto">
             <input type="radio" name="tipoRasomuro" value="recto">Recto
           </label>
           <label class="rk-card" data-valor="escalon">
-            <input type="radio" name="tipoRasomuro" value="escalon">Escalón
-          </label>
-          <label class="rk-card" data-valor="sincabecero">
-            <input type="radio" name="tipoRasomuro" value="sincabecero">Sin cabecero
+            <input type="radio" name="tipoRasomuro" value="escalon">Escalonado
           </label>
         </div>
       </div>
@@ -814,8 +936,8 @@
           <label class="rk-card" data-valor="condena">
             <input type="radio" name="cierre" value="condena">Condena
           </label>
-          <label class="rk-card" data-valor="bombillo">
-            <input type="radio" name="cierre" value="bombillo">Bombillo
+          <label class="rk-card" data-valor="cilindro">
+            <input type="radio" name="cierre" value="cilindro">Cilindro
           </label>
         </div>
       </div>
@@ -838,6 +960,10 @@
             <input type="radio" name="acabado" value="plata">
             <span class="rk-chip-swatch plata"></span>Plata
           </label>
+          <label class="rk-chip" data-valor="bronce">
+            <input type="radio" name="acabado" value="bronce">
+            <span class="rk-chip-swatch bronce"></span>Bronce
+          </label>
         </div>
       </div>
 
@@ -854,7 +980,9 @@
       <!-- ─────────────────────────────────────────────
            MODELO DE APERTURA (con dibujo dinámico)
       ───────────────────────────────────────────── -->
-      <div class="rk-grupo" data-grupo="apertura">
+      <!-- Apertura oculta en MRK. HTML+JS intactos: reactivar quitando el display:none
+           cuando se desarrollen los planos de montaje. Ver también validarConfig(). -->
+      <div class="rk-grupo" data-grupo="apertura" style="display:none;">
         <div class="rk-grupo-titulo">Modelo de apertura</div>
         <div class="rk-apertura-cards" role="radiogroup" aria-label="Modelo de apertura">
           <label class="rk-card rk-card-apert" data-valor="izquierda">
@@ -879,6 +1007,63 @@
     </div>
 
   </form>
+
+
+  <!-- ══════════════════════════════════════════════════════════════
+       BARRA DE ACCIONES DEL INFORME (banda fija superior)
+  ══════════════════════════════════════════════════════════════ -->
+  <div id="barra-informe">
+    <img class="barra-logo"
+         src="https://jdurba.github.io/General/img/LogoAdinorBlanco.png"
+         alt="ADINOR" />
+    <button type="button" id="btnAtras">⪡ Atrás</button>
+    <button type="button" id="btnPDF">📄 Generar PDF</button>
+    <button type="button" id="btnNueva">Nueva configuración</button>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════
+       FORM2 — Informe en hoja A4
+  ══════════════════════════════════════════════════════════════ -->
+  <section id="form2">
+    <div id="informe-container">
+
+      <div class="informe-header">
+        <div class="informe-header-top">
+          <img class="informe-header-logo"
+               src="https://jdurba.github.io/General/img/LOGO_2025_Negro.png"
+               alt="Adinor" />
+          <h1>Rasomuro MRK · Informe</h1>
+          <span class="informe-fecha" id="informeFecha"></span>
+        </div>
+      </div>
+
+      <div class="bloque-titulo">Parámetros seleccionados</div>
+      <div class="mrk-params" id="informeDatos"></div>
+
+      <div class="bloque-titulo">Artículos</div>
+      <table class="tabla-informe">
+        <thead>
+          <tr>
+            <th style="width:20%">Código</th>
+            <th>Descripción</th>
+            <th class="num" style="width:11%">Cant.</th>
+            <th class="num" style="width:18%">Precio</th>
+          </tr>
+        </thead>
+        <tbody id="informeArticulos"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3" class="num">TOTAL</td>
+            <td class="num" id="informeTotal">—</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <div class="informe-version" id="informeVersion"></div>
+
+    </div>
+  </section>
 
 
   <!-- ══════════════════════════════════════════════════════════════
@@ -935,7 +1120,7 @@
 
 
     // ═══════════════════════════════════════════════════════════════
-    // ANCHO DE PUERTA (input libre 600–1100; el kit es recortable,
+    // ANCHO DE PUERTA (input libre 550–1025; el kit es recortable,
     // la medida solo informa luz de obra y cortes)
     // ═══════════════════════════════════════════════════════════════
     (function () {
@@ -966,10 +1151,10 @@
         if (txt === '') { aplicar(null); return; }
 
         const v = parseInt(txt, 10);
-        if (isNaN(v) || v < 600 || v > 1100) {
+        if (isNaN(v) || v < 550 || v > 1025) {
           inputLibre.classList.remove('filled');
           inputLibre.classList.add('error');
-          errorMsg.textContent = 'Fuera de rango — admitido: 600 a 1100 mm';
+          errorMsg.textContent = 'Fuera de rango — admitido: 550 a 1025 mm';
           aplicar(null);
         } else {
           inputLibre.classList.remove('error');
@@ -1154,27 +1339,241 @@
         config.tipoRasomuro    != null &&
         config.cierre          != null &&
         config.acabado         != null &&
-        config.cantidadPuertas != null &&
-        config.apertura        != null;
+        config.cantidadPuertas != null;
+        // config.apertura → excluido: grupo oculto en MRK (reactivar si se muestra)
       document.getElementById('btnSiguiente').disabled = !completo;
     }
 
 
     // ═══════════════════════════════════════════════════════════════
-    // NAVEGACIÓN / ARRANQUE (form1 únicamente, por ahora)
+    // INFORME MRK — mapeos, precios (CSV), navegación y PDF
+    // ═══════════════════════════════════════════════════════════════
+
+    // --- Tablas de mapeo (form → catálogo) ---
+    const COD_ALTURA = { 2030:'03', 2110:'11', 2300:'23', 2500:'25', 2700:'27', 3000:'30' };
+    const COD_CABECERO = { recto:'CR', escalon:'CE' };
+    const COD_CIERRE   = { cilindro:'C', condena:'W' };
+    const COD_COLOR    = { blanco:'B', negro:'N', plata:'P', bronce:'BR' };
+    const ALTURAS_AJUSTABLES = [2300, 2500, 2700, 3000];  // para altura libre
+
+    const TXT_CABECERO = { recto:'Recto', escalon:'Escalonado' };
+    const TXT_CIERRE   = { cilindro:'Cilindro', condena:'Condena' };
+    const TXT_COLOR    = { blanco:'Blanco', negro:'Negro', plata:'Plata', bronce:'Bronce' };
+
+    // Altura de catálogo a partir de la altura de puerta seleccionada.
+    // 2030 y 2110 son fijas; el resto (libre) sube a la ajustable inmediata superior.
+    function alturaCatalogo(alto) {
+      if (alto === 2030 || alto === 2110) return alto;
+      for (const a of ALTURAS_AJUSTABLES) if (alto <= a) return a;
+      return 3000; // por encima de 3000 no debería llegar (input limitado)
+    }
+
+    // Nº de bisagras y juego de riostras según altura de catálogo
+    function numBisagras(altoCat) { return altoCat >= 2500 ? 4 : 3; }
+    function codRiostra(nBis)     { return nBis === 4 ? 'MRK.RI.3' : 'MRK.RI.2'; }
+
+    // --- Carga del CSV de precios (una sola vez, cacheado) ---
+    const CSV_URL = 'https://jdurba.github.io/Rasomuro/RasomuroPrecios.csv';
+    let catalogoMap = null;  // Code -> { desc, tarifa }
+
+    async function cargarCatalogo() {
+      if (catalogoMap) return catalogoMap;
+      const resp = await fetch(CSV_URL + '?v=' + Date.now());
+      if (!resp.ok) throw new Error('No se pudo cargar el CSV de precios');
+      const buf = await resp.arrayBuffer();
+      // El CSV está en ISO-8859-1
+      const texto = new TextDecoder('iso-8859-1').decode(buf);
+      catalogoMap = {};
+      const lineas = texto.split(/\r?\n/);
+      for (let i = 1; i < lineas.length; i++) {      // salta cabecera
+        const l = lineas[i].trim();
+        if (!l) continue;
+        const c = l.split(';');
+        const code = c[0].trim();
+        if (!code) continue;
+        catalogoMap[code] = {
+          desc:   (c[1] || '').trim(),
+          tarifa: (c[9] || '').trim()   // columna Tarifa (10ª, índice 9)
+        };
+      }
+      return catalogoMap;
+    }
+
+    // --- Construye las líneas de artículo a partir del config ---
+    function calcularArticulos() {
+      const cant    = config.cantidadPuertas;
+      const altoCat = alturaCatalogo(config.alturaPuerta);
+      const nBis    = numBisagras(altoCat);
+
+      const codMarco   = `MRK.${COD_ALTURA[altoCat]}.${COD_CABECERO[config.tipoRasomuro]}`;
+      const codHerraje = `MRHE${nBis}.${COD_CIERRE[config.cierre]}.${COD_COLOR[config.acabado]}`;
+      const codRio     = codRiostra(nBis);
+
+      return [codMarco, codHerraje, codRio].map(code => {
+        const item = (catalogoMap && catalogoMap[code]) || { desc:'(no encontrado)', tarifa:'' };
+        const precioUnit = item.tarifa === '' ? null : parseFloat(item.tarifa.replace(',', '.'));
+        return {
+          code,
+          desc: item.desc,
+          cant,
+          precioUnit,
+          precioTotal: precioUnit == null ? null : precioUnit * cant
+        };
+      });
+    }
+
+    // --- Render del informe en pantalla ---
+    function fmtEuro(n) {
+      return n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    }
+
+    function pintarInforme(articulos) {
+      // Fecha y versión
+      document.getElementById('informeFecha').textContent =
+        new Date().toLocaleDateString('es-ES');
+      document.getElementById('informeVersion').textContent =
+        window.VERSION_APP ? 'Adinor · Rasomuro MRK · ' + window.VERSION_APP : 'Adinor · Rasomuro MRK';
+
+      // Parámetros — etiqueta izq / valor der, agrupados en filas
+      const dato = (l, v) =>
+        `<div class="campo-informe"><label>${l}</label><span class="valor">${v}</span></div>`;
+
+      document.getElementById('informeDatos').innerHTML = `
+        <div class="mrk-param-fila cols-2">
+          ${dato('Ancho de puerta', config.anchoPuerta + ' mm')}
+          ${dato('Ancho luz de obra', config.anchoLuzObra + ' mm')}
+        </div>
+        <div class="mrk-param-fila cols-2">
+          ${dato('Alto de puerta', config.alturaPuerta + ' mm')}
+          ${dato('Alto luz de obra', config.alturaLuzObra + ' mm')}
+        </div>
+        <div class="mrk-param-fila cols-3">
+          ${dato('Cabecero', TXT_CABECERO[config.tipoRasomuro])}
+          ${dato('Cierre', TXT_CIERRE[config.cierre])}
+          ${dato('Acabado', TXT_COLOR[config.acabado])}
+        </div>
+        <div class="mrk-param-fila cols-1">
+          ${dato('Cantidad', config.cantidadPuertas + ' ud.')}
+        </div>`;
+
+      // Artículos
+      document.getElementById('informeArticulos').innerHTML = articulos.map(a => {
+        const precioCel = a.precioTotal == null
+          ? '<span class="incluido">incluido</span>'
+          : fmtEuro(a.precioTotal);
+        return `<tr>
+          <td class="cod">${a.code}</td>
+          <td>${a.desc}</td>
+          <td class="num">${a.cant}</td>
+          <td class="num">${precioCel}</td>
+        </tr>`;
+      }).join('');
+
+      // Total
+      const total = articulos.reduce((s, a) => s + (a.precioTotal || 0), 0);
+      document.getElementById('informeTotal').textContent = fmtEuro(total);
+    }
+
+    let articulosActuales = [];
+
+    // ═══════════════════════════════════════════════════════════════
+    // NAVEGACIÓN form1 ↔ informe
+    // ═══════════════════════════════════════════════════════════════
+    const barraInforme = document.getElementById('barra-informe');
+    const form1 = document.getElementById('form1');
+    const form2 = document.getElementById('form2');
+
+    function mostrarForm1() {
+      form2.style.display = 'none';
+      barraInforme.classList.remove('visible');
+      document.body.classList.remove('informe-activo');
+      form1.style.display = '';
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+
+    async function mostrarInforme() {
+      try {
+        await cargarCatalogo();
+      } catch (e) {
+        aviso('No se pudieron cargar los precios.\n' + e.message);
+        return;
+      }
+      articulosActuales = calcularArticulos();
+      pintarInforme(articulosActuales);
+      form1.style.display = 'none';
+      document.body.classList.add('informe-activo');
+      barraInforme.classList.add('visible');
+      form2.style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+
+    document.getElementById('btnSiguiente').addEventListener('click', mostrarInforme);
+    document.getElementById('btnAtras').addEventListener('click', mostrarForm1);
+    document.getElementById('btnNueva').addEventListener('click', () => {
+      confirmar('¿Iniciar una nueva configuración?\nSe perderán los datos actuales.', () => {
+        location.reload();
+      });
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // GENERACIÓN DE PDF (captura fiel del informe A4 con html2canvas)
+    // ═══════════════════════════════════════════════════════════════
+    document.getElementById('btnPDF').addEventListener('click', generarPDF);
+
+    async function generarPDF() {
+      const btn = document.getElementById('btnPDF');
+      const textoOrig = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Generando…';
+
+      try {
+        const { jsPDF } = window.jspdf;
+        const hoja = document.getElementById('informe-container');
+
+        // Captura la hoja tal como se ve (fondo blanco, escala 2 = nitidez)
+        const canvas = await html2canvas(hoja, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff'
+        });
+
+        const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+        const pw = pdf.internal.pageSize.getWidth();   // 210
+        const ph = pdf.internal.pageSize.getHeight();   // 297
+        const imgW = pw;
+        const imgH = canvas.height * pw / canvas.width;
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.92);
+
+        // Si la hoja cabe en una página, una sola; si no, pagina.
+        if (imgH <= ph) {
+          pdf.addImage(imgData, 'JPEG', 0, 0, imgW, imgH);
+        } else {
+          let restante = imgH;
+          let posicion = 0;
+          while (restante > 0) {
+            pdf.addImage(imgData, 'JPEG', 0, posicion, imgW, imgH);
+            restante -= ph;
+            if (restante > 0) { pdf.addPage(); posicion -= ph; }
+          }
+        }
+
+        pdf.save(`Rasomuro_MRK_${config.anchoPuerta}x${config.alturaPuerta}.pdf`);
+      } catch (e) {
+        aviso('No se pudo generar el PDF.\n' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = textoOrig;
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ARRANQUE
     // ═══════════════════════════════════════════════════════════════
     function pintarAperturaNeutra() {
       document.getElementById('aperturaDibujo').innerHTML =
         `<img src="${IMG_APERTURA_NEUTRA}" alt="Apertura">`;
     }
-
-    // El botón Siguiente aún no navega: form2 pendiente de desarrollo.
-    document.getElementById('btnSiguiente').addEventListener('click', () => {
-      // TODO: navegación a form2 cuando exista.
-      console.log('config MRK:', JSON.parse(JSON.stringify(config)));
-    });
-
-    // Estado inicial
     pintarAperturaNeutra();
 
   </script>
