@@ -1,0 +1,1723 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ADINOR — Rasomuro MRE</title>
+
+  <!-- Configuración común (mensajes + bloqueo impresión) -->
+  <script>
+    window.ADINOR_CONFIG = { tituloModal: 'Adinor · Rasomuro MRE' };
+  </script>
+  <script src="https://jdurba.github.io/General/ConfigTodos.js?v=1"></script>
+  <script src="https://jdurba.github.io/General/jspdf.umd.min.js"></script>
+  <script src="https://jdurba.github.io/General/html2canvas.min.js"></script>
+
+  <!-- Tipografías -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@200;300;400;500&family=Cormorant:ital,wght@0,300;1,300&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg:        #E5E5E3;
+      --ink:       #111111;
+      --ink-mid:   #555550;
+      --ink-light: #727270;
+      --rule:      rgba(0,0,0,0.11);
+      --hover-bg:  rgba(0,0,0,0.04);
+      --pad-x:     clamp(2rem, 6vw, 5rem);
+
+      /* Header oscuro */
+      --header-dark:   #2D3A4B;
+      --header-ink:    #FFFFFF;
+      --header-accent: #6B7FB8;
+
+      /* Paleta de tarjetas (reutilizable) */
+      --card-bg-idle:      #FFFFFF;
+      --card-bg-hover:     #F0F0EE;
+      --card-bg-selected:  #D4D4D3;
+      --card-bd-idle:      rgba(0,0,0,0.18);
+      --card-bd-hover:     #3a3a3a;
+      --card-bd-selected:  #111111;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Jost', sans-serif;
+      font-weight: 300;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ══════════════════════════════════════════
+       HEADER (replica vista-b del index)
+    ══════════════════════════════════════════ */
+    .rk-header {
+      background: var(--header-dark);
+      color: var(--header-ink);
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.3rem var(--pad-x);
+      min-height: 72px;
+    }
+    .rk-logo {
+      height: 58px;
+      width: auto;
+      display: block;
+    }
+    .rk-title {
+      text-align: center;
+      font-weight: 400;
+      font-size: clamp(1.25rem, 2.2vw, 1.6rem);
+      letter-spacing: 0.04em;
+      color: var(--header-ink);
+      opacity: 0.92;
+    }
+    .rk-back {
+      background: var(--header-accent);
+      color: #fff;
+      border: none;
+      padding: 0.55rem 1.1rem;
+      font-family: inherit;
+      font-weight: 400;
+      font-size: 0.82rem;
+      letter-spacing: 0.06em;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.22s ease, transform 0.22s ease;
+      white-space: nowrap;
+    }
+    .rk-back:hover {
+      background: #5a6ea8;
+      transform: translateX(-2px);
+    }
+
+    /* Banda descriptiva de la variante (bajo el header en form1) */
+    .rk-desc-variante {
+      background: var(--bg);
+      border-bottom: 1px solid rgba(0,0,0,0.12);
+      color: var(--ink-mid);
+      font-size: 0.92rem;
+      line-height: 1.4;
+      letter-spacing: 0.01em;
+      padding: 0.55rem var(--pad-x);
+    }
+
+    /* Banda de botones grandes (Panel · Puerta · Sistema) dentro del grid */
+    .rk-banda-botones {
+      display: flex;
+      align-items: flex-end;
+      gap: clamp(1.5rem, 5vw, 4rem);
+      flex-wrap: wrap;
+    }
+    .rk-banda-grupo {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .rk-banda-titulo {
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-mid);
+    }
+    .rk-banda-par {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .rk-bigbtn {
+      min-width: 74px;
+      padding: 0.7rem 1.3rem;
+      background: var(--card-bg-idle);
+      border: 1.5px solid var(--card-bd-idle);
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      color: var(--ink);
+      cursor: pointer;
+      user-select: none;
+      transition: border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+    }
+    .rk-bigbtn:hover {
+      background: var(--card-bg-hover);
+      border-color: var(--card-bd-hover);
+    }
+    .rk-bigbtn.selected {
+      background: #C55A11;          /* naranja quemado */
+      border-color: #A8480C;
+      color: #fff;
+      box-shadow: 0 0 0 1px #A8480C inset;
+      font-weight: 500;
+    }
+
+    /* Herraje especial (checkbox) + combos */
+    .rk-herraje-check {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      margin-top: 0.9rem;
+      padding-top: 0.9rem;
+      border-top: 1px solid rgba(0,0,0,0.18);
+      font-size: 0.9rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    .rk-herraje-check input {
+      width: 18px;
+      height: 18px;
+      accent-color: #C55A11;
+      cursor: pointer;
+    }
+    .rk-combos {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+      margin-top: 0.7rem;
+      opacity: 0.45;
+      transition: opacity 0.2s ease;
+    }
+    .rk-combos.activo { opacity: 1; }
+    .rk-combo-fila {
+      display: grid;
+      grid-template-columns: 90px 1fr;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .rk-combo-fila label {
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--ink-mid);
+    }
+    .rk-combo-fila select,
+    .rk-combo-fila .rk-combo-input {
+      font-family: inherit;
+      font-size: 0.92rem;
+      padding: 0.5rem 0.6rem;
+      border: 1.5px solid var(--card-bd-idle);
+      border-radius: 5px;
+      background: var(--card-bg-idle);
+      color: var(--ink);
+      cursor: pointer;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.18s ease, background 0.18s ease;
+    }
+    .rk-combo-fila .rk-combo-input {
+      cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23555' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.6rem center;
+      padding-right: 1.9rem;
+    }
+    .rk-combo-fila .rk-combo-input:disabled {
+      background-image: none;
+    }
+    .rk-combo-fila .rk-combo-input.filled {
+      border-color: var(--card-bd-selected);
+      background: var(--card-bg-selected);
+    }
+    .rk-combo-fila .rk-combo-input::placeholder {
+      color: var(--ink-light);
+      font-style: italic;
+      font-weight: 300;
+    }
+    .rk-combo-fila select:disabled,
+    .rk-combo-fila .rk-combo-input:disabled {
+      cursor: not-allowed;
+      background: rgba(0,0,0,0.04);
+      color: var(--ink-mid);
+    }
+
+    /* ══════════════════════════════════════════
+       CUERPO (rejilla 3 columnas, vista única)
+    ══════════════════════════════════════════ */
+    .rk-body {
+      flex: 1;
+      padding: clamp(1rem, 2vw, 1.5rem) var(--pad-x);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .rk-grupos {
+      display: grid;
+      grid-template-columns: 1fr 1.05fr 1.5fr;
+      grid-template-rows: auto auto auto auto;
+      gap: clamp(0.8rem, 1.6vw, 1.4rem) clamp(4.8rem, 10vw, 8rem);
+    }
+
+    /* Asignación de cada grupo a su celda */
+    .rk-grupo[data-grupo="banda"]     { grid-column: 1 / 3; grid-row: 1; }
+    .rk-grupo[data-grupo="ancho"]     { grid-column: 1; grid-row: 2; }
+    .rk-grupo[data-grupo="altura"]    { grid-column: 1; grid-row: 3; }
+    .rk-grupo[data-grupo="cantidad"]  { grid-column: 1; grid-row: 4; }
+    .rk-grupo[data-grupo="tipo"]      { grid-column: 2; grid-row: 2; }
+    .rk-grupo[data-grupo="cierre"]    { grid-column: 2; grid-row: 3; }
+    .rk-grupo[data-grupo="acabado"]   { grid-column: 2; grid-row: 4; }
+    .rk-grupo[data-grupo="apertura"]  { grid-column: 3; grid-row: 1 / span 4; }
+
+    /* Estilo base de un grupo */
+    .rk-grupo {
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+      min-width: 0;
+    }
+    .rk-grupo[data-grupo="banda"] { gap: 0; }
+    /* Acerca la fila de altura al bloque de ancho (sin afectar altura↔cierre) */
+    .rk-grupo[data-grupo="altura"] { margin-top: -0.9rem; }
+    .rk-grupo-titulo {
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--ink-mid);
+      padding-bottom: 0.45rem;
+      border-bottom: 1px solid rgba(0,0,0,0.35);
+    }
+
+    /* Fila de cards (mini) */
+    .rk-cards-row {
+      display: grid;
+      gap: 0.45rem;
+    }
+    .rk-cards-row.cols-2 { grid-template-columns: repeat(2, 1fr); }
+    .rk-cards-row.cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .rk-card.disabled { opacity: 0.35; pointer-events: none; }
+    .rk-cards-row.cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+    /* Card MINI (compacta) */
+    .rk-card {
+      position: relative;
+      background: var(--card-bg-idle);
+      border: 1.5px solid var(--card-bd-idle);
+      border-radius: 5px;
+      padding: 0.5rem 0.4rem;
+      cursor: pointer;
+      transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 0.82rem;
+      font-weight: 400;
+      letter-spacing: 0.03em;
+      color: var(--ink);
+      user-select: none;
+      min-height: 36px;
+      white-space: nowrap;
+    }
+    .rk-card:hover {
+      background: var(--card-bg-hover);
+      border-color: var(--card-bd-hover);
+    }
+    .rk-card.selected {
+      background: var(--card-bg-selected);
+      border-color: var(--card-bd-selected);
+      box-shadow: 0 0 0 1px var(--card-bd-selected) inset;
+    }
+    .rk-card input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Card de apertura (con imagen miniatura) */
+    .rk-card-apert {
+      flex-direction: column;
+      gap: 0.3rem;
+      padding: 0.5rem;
+      min-height: auto;
+    }
+    .rk-card-apert img {
+      width: 100%;
+      max-height: 60px;
+      object-fit: contain;
+      display: block;
+    }
+    .rk-card-apert span {
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* Input numérico libre (estilo coherente con card) */
+    .rk-input-libre {
+      background: var(--card-bg-idle);
+      border: 1.5px solid var(--card-bd-idle);
+      border-radius: 5px;
+      padding: 0.5rem 0.7rem;
+      font-family: inherit;
+      font-size: 0.85rem;
+      color: var(--ink);
+      width: 100%;
+      outline: none;
+      transition: border-color 0.18s ease, background 0.18s ease;
+    }
+    .rk-input-libre::placeholder {
+      color: var(--ink-light);
+      font-style: italic;
+      font-weight: 300;
+    }
+    .rk-input-libre:focus,
+    .rk-input-libre.filled {
+      border-color: var(--card-bd-selected);
+      background: var(--card-bg-selected);
+    }
+    .rk-input-libre.error {
+      border-color: #b3261e;
+      background: #fdecea;
+    }
+
+    /* Mensaje de error inline (rango fuera) */
+    .rk-error-msg {
+      font-size: 0.82rem;
+      color: #b3261e;
+      letter-spacing: 0.02em;
+      min-height: 0;
+      margin-top: 0;
+    }
+    .rk-error-msg:empty { display: none; }
+
+    /* Campo calculado (readonly) — más compacto */
+    .rk-calc {
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+      margin-top: -0.35rem;
+    }
+    .rk-calc-label {
+      font-size: 0.68rem;
+      font-weight: 400;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-mid);
+      white-space: nowrap;
+    }
+    .rk-calc-input {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid rgba(0,0,0,0.25);
+      padding: 0.15rem 0.2rem;
+      font-family: inherit;
+      font-size: 0.85rem;
+      color: var(--ink-light);
+      width: 90px;
+      outline: none;
+      transition: border-color 0.22s ease, color 0.22s ease;
+    }
+    .rk-calc-input.filled {
+      color: var(--ink);
+      border-bottom-color: var(--ink);
+    }
+    .rk-calc-input.sin-borde,
+    .rk-calc-input.sin-borde.filled {
+      border-bottom: none;
+    }
+
+    /* Chips de acabado (Blanco/Negro) */
+    .rk-chips {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .rk-chip {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.4rem;
+      background: var(--card-bg-idle);
+      border: 1.5px solid var(--card-bd-idle);
+      border-radius: 5px;
+      cursor: pointer;
+      transition: border-color 0.18s ease, background 0.18s ease;
+      font-size: 0.82rem;
+      font-weight: 400;
+      letter-spacing: 0.03em;
+      color: var(--ink);
+      user-select: none;
+      min-height: 36px;
+    }
+    .rk-chip:hover {
+      border-color: var(--card-bd-hover);
+      background: var(--card-bg-hover);
+    }
+    .rk-chip.selected {
+      border-color: var(--card-bd-selected);
+      background: var(--card-bg-selected);
+      box-shadow: 0 0 0 1px var(--card-bd-selected) inset;
+    }
+    .rk-chip-swatch {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      border: 1px solid rgba(0,0,0,0.25);
+      flex-shrink: 0;
+    }
+    .rk-chip-swatch.blanco { background: #FFFFFF; }
+    .rk-chip-swatch.negro  { background: #1a1a1a; border-color: rgba(0,0,0,0.4); }
+    .rk-chip-swatch.plata  { background: linear-gradient(135deg, #d8d8d8 0%, #b0b0b0 50%, #d8d8d8 100%); }
+    .rk-chip-swatch.bronce { background: linear-gradient(135deg, #b08d57 0%, #7d5a2b 50%, #b08d57 100%); border-color: rgba(0,0,0,0.3); }
+    .rk-chip input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* Grupo apertura: cards arriba + dibujo grande debajo */
+    .rk-apertura-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+    }
+    .rk-apertura-dibujo {
+      min-height: 140px;
+      background: var(--card-bg-idle);
+      border: 1px solid var(--card-bd-idle);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem;
+      overflow: hidden;
+    }
+    .rk-apertura-dibujo img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .rk-flip {
+      transform: scaleX(-1);
+    }
+
+    /* Cantidad puertas: input pequeño */
+    .rk-cantidad-input {
+      width: 80px;
+      text-align: center;
+    }
+
+    /* Zona de acciones del form1 (dentro del flujo, no en footer) */
+    .rk-form-acciones {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 1rem;
+      margin-top: clamp(1rem, 2vw, 1.6rem);
+      padding-top: clamp(0.8rem, 1.5vw, 1.2rem);
+      border-top: 1px solid rgba(0,0,0,0.18);
+    }
+    .rk-form-acciones .rk-hint {
+      margin-right: auto;
+    }
+
+    /* ═══════════════════════════════════════════
+       INFORME MRN (form2) — HOJA A4 (lenguaje ecosistema)
+    ═══════════════════════════════════════════ */
+
+    /* Barra fija de acciones (banda oscura superior) */
+    #barra-informe {
+      display: none;
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      background: #2D3A4B;
+      height: 72px; padding: 0 28px;
+      align-items: center; gap: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+    #barra-informe.visible { display: flex; }
+    #barra-informe .barra-logo { height: 46px; width: auto; margin-right: auto; }
+    #barra-informe button {
+      min-width: 115px; padding: 9px 16px;
+      font-family: 'Jost', sans-serif; font-size: 0.85rem;
+      color: #fff; background: #4a5b7a; border: none; border-radius: 4px;
+      cursor: pointer; transition: background 0.2s ease, transform 0.2s ease;
+      letter-spacing: 0.03em;
+    }
+    #barra-informe button:hover { background: #5a6ea8; transform: translateX(2px); }
+
+    /* El informe necesita scroll: desbloquea el body de viewport fijo */
+    body.informe-activo {
+      background: #e4e5e3;
+      height: auto; min-height: 100vh; overflow: auto;
+    }
+    body.informe-activo header#header1 { display: none; }
+
+    /* Hoja A4 */
+    #form2 {
+      display: none;
+      padding: 90px 0 40px;   /* deja hueco para la barra fija */
+    }
+    #informe-container {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 18mm 16mm;
+      box-sizing: border-box;
+      background: #ffffff;
+      box-shadow: 0 3px 16px rgba(0,0,0,0.18);
+      color: #222;
+      font-family: 'Jost', sans-serif;
+    }
+
+    /* Cabecera del informe */
+    .informe-header { border-bottom: 2px solid #2D3A4B; padding-bottom: 20px; margin-bottom: 22px; }
+    .informe-header-top { display: flex; align-items: center; gap: 16px; }
+    .informe-header-logo {
+      height: 54px;          /* logo PNG completo (símbolo + tagline) */
+      width: auto;
+      flex-shrink: 0;
+    }
+    .informe-header h1 {
+      flex: 1; margin: 0; text-align: center;
+      font-family: 'Jost', sans-serif; font-weight: 600;
+      font-size: 20px; letter-spacing: 0.5px; text-transform: uppercase;
+      color: #2D3A4B; line-height: 1.2;
+    }
+    .informe-fecha { font-size: 11px; color: #888; white-space: nowrap; }
+    .informe-desc-variante {
+      margin-top: 20px; font-size: 13px; line-height: 1.4;
+      color: #555; font-weight: 300;
+    }
+
+    /* Bloques */
+    .bloque-titulo {
+      background: #d7d8d6; border: 1.5px solid #b7b8b6;
+      padding: 7px 16px; border-radius: 4px;
+      font-weight: 600; font-size: 12px; letter-spacing: 0.06em;
+      text-transform: uppercase; color: #333;
+      margin: 22px 0 14px;
+    }
+
+    /* Parámetros — etiqueta izq / valor der, filas agrupadas */
+    .mrk-params { display: flex; flex-direction: column; gap: 0; padding: 0 4px; }
+    .mrk-param-fila { display: grid; gap: 0 clamp(2rem, 6vw, 5rem); }
+    .mrk-param-fila.cols-2 { grid-template-columns: 1fr 1fr; }
+    .mrk-param-fila.cols-3 { grid-template-columns: 1fr 1fr 1fr; margin-top: 22px; }
+    .mrk-param-fila.cols-1 { grid-template-columns: 1fr 1fr 1fr; }  /* misma rejilla que cols-3 */
+    .campo-informe {
+      display: flex; align-items: baseline; justify-content: space-between;
+      gap: 12px; padding: 7px 2px;
+      border-bottom: 1px dotted #bbb;
+    }
+    .campo-informe label {
+      font-weight: bold; font-size: 12px; color: #555;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .campo-informe .valor {
+      font-size: 13px; font-weight: 300; color: #222; text-align: right;
+    }
+
+    /* Tabla de artículos (estilo ecosistema) */
+    .tabla-informe {
+      width: 100%; border-collapse: collapse; margin-top: 6px;
+    }
+    .tabla-informe th, .tabla-informe td {
+      border: 1px solid #333; padding: 8px 10px; font-size: 12px;
+    }
+    .tabla-informe th {
+      background: #ddd; font-weight: bold; text-align: left;
+      letter-spacing: 0.04em;
+    }
+    .tabla-informe td.cod { font-weight: 600; white-space: nowrap; }
+    .tabla-informe th.num, .tabla-informe td.num { text-align: right; }
+    .tabla-informe .incluido { color: #999; font-style: italic; }
+    .tabla-informe .obs td { font-style: italic; color: #555; }
+    .tabla-informe th.copia, .tabla-informe td.copia {
+      border: none; background: none; text-align: center; padding: 4px;
+    }
+    .btn-copia {
+      border: 1px solid #b7b8b6; background: #ececeb; border-radius: 4px;
+      cursor: pointer; padding: 3px 7px; font-size: 13px; line-height: 1;
+      transition: background 0.15s ease;
+    }
+    .btn-copia:hover { background: #d7d8d6; }
+    .btn-copia.ok { background: #cfe6cf; border-color: #93c393; }
+    .tabla-informe tfoot td {
+      border: none; border-top: 2px solid #2D3A4B;
+      font-weight: bold; font-size: 14px; padding-top: 12px;
+    }
+
+    .informe-version {
+      margin-top: 18px; text-align: right;
+      font-size: 9px; color: #aaa;
+    }
+
+    /* Forzar colores en PDF/impresión */
+    #informe-container * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    @media (max-width: 800px) {
+      #informe-container { width: 100%; min-height: 0; padding: 24px 18px; }
+    }
+
+    /* ══════════════════════════════════════════
+       FOOTER (acciones)
+    ══════════════════════════════════════════ */
+    .rk-footer {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 0.7rem var(--pad-x);
+      border-top: 1px solid rgba(0,0,0,0.25);
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .rk-hint {
+      font-family: 'Cormorant', serif;
+      font-style: italic;
+      font-size: 1rem;
+      color: var(--ink-mid);
+      margin-right: auto;
+    }
+    .rk-btn {
+      background: #4a4a4a;
+      color: #fff;
+      border: none;
+      padding: 0.55rem 1.3rem;
+      font-family: inherit;
+      font-weight: 400;
+      font-size: 0.82rem;
+      letter-spacing: 0.1em;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background 0.22s ease, transform 0.22s ease;
+    }
+    .rk-btn:hover:not(:disabled) {
+      background: #111111;
+      transform: translateX(2px);
+    }
+    .rk-btn:disabled {
+      background: #b8b8b6;
+      cursor: not-allowed;
+    }
+
+    /* ══════════════════════════════════════════
+       RESPONSIVE
+    ══════════════════════════════════════════ */
+    @media (max-width: 980px) {
+      .rk-grupos {
+        grid-template-columns: 1fr 1fr;
+      }
+      .rk-grupo[data-grupo="banda"]     { grid-column: 1 / -1; grid-row: 1; }
+      .rk-grupo[data-grupo="ancho"]     { grid-column: 1; grid-row: 2; }
+      .rk-grupo[data-grupo="altura"]    { grid-column: 2; grid-row: 2; }
+      .rk-grupo[data-grupo="tipo"]      { grid-column: 1; grid-row: 3; }
+      .rk-grupo[data-grupo="cierre"]    { grid-column: 2; grid-row: 3; }
+      .rk-grupo[data-grupo="cantidad"]  { grid-column: 1; grid-row: 4; }
+      .rk-grupo[data-grupo="acabado"]   { grid-column: 2; grid-row: 4; }
+      .rk-grupo[data-grupo="apertura"]  { grid-column: 1 / -1; grid-row: 5; }
+      .rk-apertura-dibujo { min-height: 160px; }
+    }
+    @media (max-width: 700px) {
+      .rk-header {
+        grid-template-columns: auto auto;
+        grid-template-rows: auto auto;
+      }
+      .rk-title {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        text-align: left;
+      }
+      .rk-grupos { grid-template-columns: 1fr; }
+      .rk-grupo  { grid-column: 1 !important; }
+    }
+    @media (max-width: 420px) {
+      .rk-btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       HEADER · Form1 (configuración)
+  ══════════════════════════════════════════════════════════════ -->
+  <header class="rk-header" id="header1">
+    <img class="rk-logo"
+         src="https://jdurba.github.io/General/img/LogoAdinorBlanco.png"
+         alt="ADINOR" />
+    <div class="rk-title">Rasomuro MRE</div>
+    <button type="button" class="rk-back" onclick="volverAlMenuRasomuro()">← Volver al menú</button>
+  </header>
+
+  <!-- Descripción de la variante (texto en DESC_VARIANTE) -->
+  <div class="rk-desc-variante" id="descVariante"></div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       FORM1 — Captación de datos
+  ══════════════════════════════════════════════════════════════ -->
+  <form id="form1" class="rk-body" autocomplete="off" onsubmit="return false;">
+
+    <div class="rk-grupos" id="rk-grupos">
+
+      <!-- ─────────────────────────────────────────────
+           BANDA DE BOTONES GRANDES · Panel · Puerta · Sistema
+      ───────────────────────────────────────────── -->
+      <div class="rk-grupo" data-grupo="banda">
+        <div class="rk-banda-botones">
+          <div class="rk-banda-grupo" data-banda="panel">
+            <span class="rk-banda-titulo">Panel</span>
+            <div class="rk-banda-par">
+              <button type="button" class="rk-bigbtn" data-valor="12">12 mm</button>
+              <button type="button" class="rk-bigbtn" data-valor="15">15 mm</button>
+            </div>
+          </div>
+          <div class="rk-banda-grupo" data-banda="puerta">
+            <span class="rk-banda-titulo">Puerta</span>
+            <div class="rk-banda-par">
+              <button type="button" class="rk-bigbtn" data-valor="si">SÍ</button>
+              <button type="button" class="rk-bigbtn" data-valor="no">No</button>
+            </div>
+          </div>
+          <div class="rk-banda-grupo" data-banda="sistema">
+            <span class="rk-banda-titulo">Sistema</span>
+            <div class="rk-banda-par">
+              <button type="button" class="rk-bigbtn" data-valor="sencilla">Sencilla</button>
+              <button type="button" class="rk-bigbtn" data-valor="doble">Doble</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────────────
+           ANCHO DE PUERTA
+      ───────────────────────────────────────────── -->
+      <div class="rk-grupo" data-grupo="ancho">
+        <div class="rk-grupo-titulo">Ancho de puerta</div>
+        <input type="number" id="anchoLibre" class="rk-input-libre"
+               step="1"
+               placeholder="elige sistema y teclea medida">
+        <div class="rk-error-msg" id="anchoError"></div>
+        <div class="rk-calc">
+          <span class="rk-calc-label">Ancho luz de obra</span>
+          <input type="text" id="anchoLuzObra" class="rk-calc-input sin-borde" readonly placeholder="—">
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────────────
+           ALTURA DE PUERTA
+      ───────────────────────────────────────────── -->
+      <div class="rk-grupo" data-grupo="altura">
+        <div class="rk-grupo-titulo">Altura de puerta</div>
+        <input type="number" id="alturaLibre" class="rk-input-libre"
+               min="1800" max="3000" step="1"
+               placeholder="medida (1800 — 3000)">
+        <div class="rk-error-msg" id="alturaError"></div>
+        <div class="rk-calc">
+          <span class="rk-calc-label">Alto luz de obra</span>
+          <input type="text" id="alturaLuzObra" class="rk-calc-input sin-borde" readonly placeholder="—">
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────────────
+           TIPO RASOMURO
+      ───────────────────────────────────────────── -->
+      <div class="rk-grupo" data-grupo="tipo">
+        <div class="rk-grupo-titulo">Tipo de cabecero</div>
+        <div class="rk-cards-row cols-3" role="radiogroup" aria-label="Tipo de cabecero">
+          <label class="rk-card" data-valor="recto">
+            <input type="radio" name="tipoRasomuro" value="recto">Recto
+          </label>
+          <label class="rk-card" data-valor="escalonado">
+            <input type="radio" name="tipoRasomuro" value="escalonado">Escalonado
+          </label>
+          <label class="rk-card" data-valor="sincabecero">
+            <input type="radio" name="tipoRasomuro" value="sincabecero">Sin cabecero
+          </label>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────────────
+           MODELO DE CIERRE
+      ───────────────────────────────────────────── -->
+      <div class="rk-grupo" data-grupo="cierre">
+        <div class="rk-grupo-titulo">Modelo de cierre</div>
+        <div class="rk-cards-row cols-2" role="radiogroup" aria-label="Modelo de cierre">
+          <label class="rk-card" data-valor="condena">
+            <input type="radio" name="cierre" value="condena">Condena
+          </label>
+          <label class="rk-card" data-valor="cilindro">
+            <input type="radio" name="cierre" value="cilindro">Cilindro
+          </label>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────────────
+           ACABADO (cerradura + bisagras unificado)
+      ───────────────────────────────────────────── -->
+      <div class="rk-grupo" data-grupo="acabado">
+        <div class="rk-grupo-titulo">Acabado (cerradura y bisagras)</div>
+        <div class="rk-chips" role="radiogroup" aria-label="Acabado">
+          <label class="rk-chip" data-valor="blanco">
+            <input type="radio" name="acabado" value="blanco">
+            <span class="rk-chip-swatch blanco"></span>Blanco
+          </label>
+          <label class="rk-chip" data-valor="negro">
+            <input type="radio" name="acabado" value="negro">
+            <span class="rk-chip-swatch negro"></span>Negro
+          </label>
+          <label class="rk-chip" data-valor="plata">
+            <input type="radio" name="acabado" value="plata">
+            <span class="rk-chip-swatch plata"></span>Plata
+          </label>
+          <label class="rk-chip" data-valor="bronce">
+            <input type="radio" name="acabado" value="bronce">
+            <span class="rk-chip-swatch bronce"></span>Bronce
+          </label>
+        </div>
+      </div>
+
+      <!-- ─────────────────────────────────────────────
+           CANTIDAD DE PUERTAS
+      ───────────────────────────────────────────── -->
+      <div class="rk-grupo" data-grupo="cantidad">
+        <div class="rk-grupo-titulo">Cantidad de puertas</div>
+        <input type="number" id="cantidadPuertas"
+               class="rk-input-libre rk-cantidad-input"
+               min="1" max="20" step="1" placeholder="—">
+      </div>
+
+      <!-- ─────────────────────────────────────────────
+           MODELO DE APERTURA (con dibujo dinámico)
+      ───────────────────────────────────────────── -->
+      <div class="rk-grupo" data-grupo="apertura">
+        <div class="rk-grupo-titulo">Modelo de apertura</div>
+        <div class="rk-apertura-cards" role="radiogroup" aria-label="Modelo de apertura">
+          <label class="rk-card rk-card-apert" data-valor="izquierda">
+            <input type="radio" name="apertura" value="izquierda">
+            <span>Izquierda</span>
+          </label>
+          <label class="rk-card rk-card-apert" data-valor="derecha">
+            <input type="radio" name="apertura" value="derecha">
+            <span>Derecha</span>
+          </label>
+        </div>
+        <div class="rk-apertura-dibujo" id="aperturaDibujo"></div>
+
+        <!-- ── Herraje especial + combos (columna 3) ── -->
+        <label class="rk-herraje-check">
+          <input type="checkbox" id="herrajeEspecial">
+          <span>Herraje especial</span>
+        </label>
+
+        <div class="rk-combos" id="combosHerraje">
+          <div class="rk-combo-fila">
+            <label for="comboCerradura">Cerradura</label>
+            <input list="listaCerradura" id="comboCerradura" class="rk-combo-input"
+                   placeholder="elige o escribe" disabled autocomplete="off">
+            <datalist id="listaCerradura">
+              <option value="AGB"></option>
+              <option value="ADINOR"></option>
+            </datalist>
+          </div>
+
+          <div class="rk-combo-fila">
+            <label for="comboCerradero">Cerradero</label>
+            <input list="listaCerradero" id="comboCerradero" class="rk-combo-input"
+                   placeholder="elige o escribe" disabled autocomplete="off">
+            <datalist id="listaCerradero">
+              <option value="AGB"></option>
+              <option value="POLARIS"></option>
+              <option value="SPIRIT"></option>
+              <option value="ADINOR"></option>
+            </datalist>
+          </div>
+
+          <div class="rk-combo-fila">
+            <label for="comboBisagras">Bisagras</label>
+            <input list="listaBisagras" id="comboBisagras" class="rk-combo-input"
+                   placeholder="elige o escribe" disabled autocomplete="off">
+            <datalist id="listaBisagras">
+              <option value="KRONA 80-60"></option>
+              <option value="SIMONS T240"></option>
+              <option value="OTLAV"></option>
+              <option value="ADINOR"></option>
+            </datalist>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="rk-form-acciones">
+      <span class="rk-hint">Completa la configuración para continuar</span>
+      <button type="button" class="rk-btn" id="btnSiguiente" disabled>
+        Siguiente →
+      </button>
+    </div>
+
+  </form>
+
+
+  <!-- ══════════════════════════════════════════════════════════════
+       BARRA DE ACCIONES DEL INFORME (banda fija superior)
+  ══════════════════════════════════════════════════════════════ -->
+  <div id="barra-informe">
+    <img class="barra-logo"
+         src="https://jdurba.github.io/General/img/LogoAdinorBlanco.png"
+         alt="ADINOR" />
+    <button type="button" id="btnAtras">⪡ Atrás</button>
+    <button type="button" id="btnPDF">📄 Generar PDF</button>
+    <button type="button" id="btnNueva">Nueva configuración</button>
+  </div>
+
+
+  <!-- ══════════════════════════════════════════════════════════════
+       FORM2 — Informe en hoja A4
+  ══════════════════════════════════════════════════════════════ -->
+  <section id="form2">
+    <div id="informe-container">
+
+      <div class="informe-header">
+        <div class="informe-header-top">
+          <img class="informe-header-logo"
+               src="https://jdurba.github.io/General/img/LOGO_2025_Negro.png"
+               alt="Adinor" />
+          <h1>Rasomuro MRE · Informe</h1>
+          <span class="informe-fecha" id="informeFecha"></span>
+        </div>
+        <div class="informe-desc-variante" id="informeDescVariante"></div>
+      </div>
+
+      <div class="bloque-titulo">Parámetros seleccionados</div>
+      <div class="mrk-params" id="informeDatos"></div>
+
+      <div class="bloque-titulo">Artículos</div>
+      <table class="tabla-informe">
+        <thead>
+          <tr>
+            <th class="copia" style="width:6%" data-html2canvas-ignore></th>
+            <th style="width:20%">Código</th>
+            <th>Descripción</th>
+            <th class="num" style="width:11%">Cant.</th>
+            <th class="num" style="width:16%">Precio</th>
+          </tr>
+        </thead>
+        <tbody id="informeArticulos"></tbody>
+        <tfoot>
+          <tr>
+            <td class="copia" data-html2canvas-ignore></td>
+            <td colspan="3" class="num">TOTAL</td>
+            <td class="num" id="informeTotal">—</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <div class="informe-version" id="informeVersion"></div>
+
+    </div>
+  </section>
+
+
+  <!-- ══════════════════════════════════════════════════════════════
+       JAVASCRIPT
+  ══════════════════════════════════════════════════════════════ -->
+  <script>
+    // ═══════════════════════════════════════════════════════════════
+    // DESCRIPCIÓN DE LA VARIANTE  (único punto a editar por configurador)
+    // ═══════════════════════════════════════════════════════════════
+    const DESC_VARIANTE = 'MRE: Rasomuro totalmente a medida';
+
+    // ═══════════════════════════════════════════════════════════════
+    // ESTADO DEL CONFIGURADOR
+    // ═══════════════════════════════════════════════════════════════
+    const config = {
+      panel:          null,   // 12 | 15
+      llevaPuerta:    null,   // 'si' | 'no'
+      sistema:        null,   // 'sencilla' | 'doble'
+      anchoPuerta:    null,
+      anchoLuzObra:   null,
+      alturaPuerta:   null,
+      alturaLuzObra:  null,
+      tipoRasomuro:   null,
+      cierre:         null,
+      acabado:        null,
+      cantidadPuertas:null,
+      apertura:       null,
+      herrajeEspecial:false,
+      cerradura:      null,
+      cerradero:      null,
+      bisagras:       null
+    };
+
+    const HOLGURA_ANCHO = 75;  // mm — ancho luz obra = ancho puerta + 75
+    const HOLGURA_ALTO  = {    // mm — alto luz obra = alto puerta + holgura según cabecero
+      recto:       45,
+      escalonado:  42,
+      sincabecero: 10
+    };
+
+    // Imagen base de apertura (servida desde GitHub Pages)
+    // La 'izquierda' es la misma imagen volteada con CSS (scaleX -1)
+    const IMG_APERTURA_BASE    = 'https://jdurba.github.io/Rasomuro02/Img/AperturaDer.png';
+    const IMG_APERTURA_NEUTRA  = 'https://jdurba.github.io/Rasomuro02/Img/AperturaNeutra.png';
+
+    // ═══════════════════════════════════════════════════════════════
+    // Vuelta a al submenu rasomuro, cambio mas coherente
+    // ═══════════════════════════════════════════════════════════════
+    function volverAlMenuRasomuro() {
+      localStorage.setItem('regresarASubMenuRasomuro', '1');
+      const url = location.hostname.endsWith('github.io')
+        ? 'https://jdurba.github.io/General/index.html'
+        : '../General/index.html';
+      window.location.href = url;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // HELPERS
+    // ═══════════════════════════════════════════════════════════════
+    function marcarUnica(cards, cardElegida) {
+      cards.forEach(c => c.classList.remove('selected'));
+      cardElegida.classList.add('selected');
+      const radio = cardElegida.querySelector('input[type="radio"]');
+      if (radio) radio.checked = true;
+    }
+
+    function escribirCalc(input, valor) {
+      if (valor == null) {
+        input.value = '';
+        input.classList.remove('filled');
+      } else {
+        input.value = valor + ' mm';
+        input.classList.add('filled');
+      }
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // ANCHO DE PUERTA (rango según sistema: sencilla 500-1200 · doble 700-2400)
+    // ═══════════════════════════════════════════════════════════════
+    const RANGO_ANCHO = {
+      sencilla: { min: 500, max: 1200 },
+      doble:    { min: 700, max: 2400 }
+    };
+
+    let actualizarRangoAncho = () => {};   // se define dentro del IIFE
+
+    (function () {
+      const inputLibre = document.getElementById('anchoLibre');
+      const inputLuz   = document.getElementById('anchoLuzObra');
+      const errorMsg   = document.getElementById('anchoError');
+
+      function rango() {
+        return RANGO_ANCHO[config.sistema] || null;
+      }
+
+      function aplicar(ancho) {
+        config.anchoPuerta  = ancho;
+        config.anchoLuzObra = ancho == null ? null : ancho + HOLGURA_ANCHO;
+        escribirCalc(inputLuz, config.anchoLuzObra);
+        validarConfig();
+      }
+
+      function validarRango() {
+        const r = rango();
+        const txt = inputLibre.value.trim();
+        if (txt === '') return;
+        if (!r) {                                   // aún no hay sistema elegido
+          inputLibre.classList.remove('filled');
+          inputLibre.classList.add('error');
+          errorMsg.textContent = 'Elige primero el sistema (sencilla / doble)';
+          aplicar(null);
+          return;
+        }
+        const v = parseInt(txt, 10);
+        if (isNaN(v) || v < r.min || v > r.max) {
+          inputLibre.classList.remove('filled');
+          inputLibre.classList.add('error');
+          errorMsg.textContent = `Fuera de rango — admitido: ${r.min} a ${r.max} mm`;
+          aplicar(null);
+        } else {
+          inputLibre.classList.remove('error');
+          inputLibre.classList.add('filled');
+          errorMsg.textContent = '';
+          aplicar(v);
+        }
+      }
+
+      inputLibre.addEventListener('input', () => {
+        inputLibre.classList.remove('error');
+        errorMsg.textContent = '';
+        if (inputLibre.value.trim() === '') {
+          inputLibre.classList.remove('filled');
+          aplicar(null);
+        }
+      });
+      inputLibre.addEventListener('change', validarRango);
+      inputLibre.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); validarRango(); }
+      });
+
+      // Llamada desde la banda al cambiar de sistema: ajusta límites y revalida
+      actualizarRangoAncho = function () {
+        const r = rango();
+        if (r) {
+          inputLibre.min = r.min;
+          inputLibre.max = r.max;
+          inputLibre.placeholder = `medida (${r.min} — ${r.max})`;
+        }
+        validarRango();   // revalida lo tecleado contra el nuevo rango
+      };
+    })();
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // ALTURA DE PUERTA (2 cards + input libre, excluyentes)
+    // ═══════════════════════════════════════════════════════════════
+    // Alto luz obra depende de alturaPuerta + tipoRasomuro (recto 45 / sin cabecero 10).
+    function recalcularAlturaLuz() {
+      const inputLuz = document.getElementById('alturaLuzObra');
+      const altura   = config.alturaPuerta;
+      const tipo     = config.tipoRasomuro;
+      config.alturaLuzObra = (altura && tipo) ? altura + HOLGURA_ALTO[tipo] : null;
+      escribirCalc(inputLuz, config.alturaLuzObra);
+    }
+
+    (function () {
+      const inputLibre = document.getElementById('alturaLibre');
+      const errorMsg   = document.getElementById('alturaError');
+
+      function aplicar(altura) {
+        config.alturaPuerta = altura;
+        recalcularAlturaLuz();
+        validarConfig();
+      }
+
+      inputLibre.addEventListener('input', () => {
+        inputLibre.classList.remove('error');
+        errorMsg.textContent = '';
+        if (inputLibre.value.trim() === '') {
+          inputLibre.classList.remove('filled');
+          aplicar(null);
+        }
+      });
+
+      function validarRango() {
+        const txt = inputLibre.value.trim();
+        if (txt === '') return;
+        const v = parseInt(txt, 10);
+        if (isNaN(v) || v < 1800 || v > 3000) {
+          inputLibre.classList.remove('filled');
+          inputLibre.classList.add('error');
+          errorMsg.textContent = 'Fuera de rango — admitido: 1800 a 3000 mm';
+          aplicar(null);
+        } else {
+          inputLibre.classList.remove('error');
+          inputLibre.classList.add('filled');
+          errorMsg.textContent = '';
+          aplicar(v);
+        }
+      }
+
+      inputLibre.addEventListener('change', validarRango);
+      inputLibre.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); validarRango(); }
+      });
+    })();
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // SELECTORES SIMPLES (tipo / cierre)
+    // ═══════════════════════════════════════════════════════════════
+    function inicSelectorSimple(grupo, key) {
+      const cards = document.querySelectorAll(`.rk-grupo[data-grupo="${grupo}"] .rk-card`);
+      cards.forEach(card => {
+        card.addEventListener('click', (e) => {
+          e.preventDefault();
+          marcarUnica(cards, card);
+          config[key] = card.dataset.valor;
+          validarConfig();
+        });
+      });
+    }
+    inicSelectorSimple('tipo',   'tipoRasomuro');
+    inicSelectorSimple('cierre', 'cierre');
+
+    // Cabecero: recalcular alto luz obra según holgura (recto/escalonado/sincabecero)
+    document.querySelectorAll('.rk-grupo[data-grupo="tipo"] .rk-card')
+      .forEach(card => card.addEventListener('click', () => {
+        recalcularAlturaLuz();
+        validarConfig();
+      }));
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // ACABADO (chips)
+    // ═══════════════════════════════════════════════════════════════
+    (function () {
+      const chips = document.querySelectorAll('.rk-grupo[data-grupo="acabado"] .rk-chip');
+      chips.forEach(chip => {
+        chip.addEventListener('click', (e) => {
+          e.preventDefault();
+          chips.forEach(c => c.classList.remove('selected'));
+          chip.classList.add('selected');
+          const radio = chip.querySelector('input[type="radio"]');
+          if (radio) radio.checked = true;
+          config.acabado = chip.dataset.valor;
+          validarConfig();
+        });
+      });
+    })();
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // CANTIDAD DE PUERTAS
+    // ═══════════════════════════════════════════════════════════════
+    (function () {
+      const input = document.getElementById('cantidadPuertas');
+      input.addEventListener('input', () => {
+        const v = parseInt(input.value, 10);
+        if (!isNaN(v) && v >= 1 && v <= 20) {
+          input.classList.add('filled');
+          config.cantidadPuertas = v;
+        } else {
+          input.classList.remove('filled');
+          config.cantidadPuertas = null;
+        }
+        validarConfig();
+      });
+    })();
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // MODELO DE APERTURA (cambia dibujo dinámico)
+    // ═══════════════════════════════════════════════════════════════
+    (function () {
+      const cards  = document.querySelectorAll('.rk-grupo[data-grupo="apertura"] .rk-card');
+      const dibujo = document.getElementById('aperturaDibujo');
+
+      cards.forEach(card => {
+        card.addEventListener('click', (e) => {
+          e.preventDefault();
+          marcarUnica(cards, card);
+          const valor = card.dataset.valor;
+          config.apertura = valor;
+          const flip = (valor === 'izquierda') ? ' rk-flip' : '';
+          dibujo.innerHTML = `<img class="${flip.trim()}" src="${IMG_APERTURA_BASE}" alt="Apertura ${valor}">`;
+          validarConfig();
+        });
+      });
+    })();
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // HERRAJE ESPECIAL (checkbox) → habilita combos cerradura/cerradero/bisagras
+    // ═══════════════════════════════════════════════════════════════
+    (function () {
+      const chk    = document.getElementById('herrajeEspecial');
+      const cont   = document.getElementById('combosHerraje');
+      const inputs = {
+        cerradura: document.getElementById('comboCerradura'),
+        cerradero: document.getElementById('comboCerradero'),
+        bisagras:  document.getElementById('comboBisagras')
+      };
+
+      chk.addEventListener('change', () => {
+        config.herrajeEspecial = chk.checked;
+        cont.classList.toggle('activo', chk.checked);
+        Object.values(inputs).forEach(inp => { inp.disabled = !chk.checked; });
+
+        if (!chk.checked) {                     // al desactivar, limpia todo
+          Object.entries(inputs).forEach(([k, inp]) => {
+            inp.value = '';
+            inp.classList.remove('filled');
+            config[k] = null;
+          });
+        }
+        validarConfig();
+      });
+
+      Object.entries(inputs).forEach(([k, inp]) => {
+        // Abre la lista al enfocar/pulsar (donde el navegador lo soporte)
+        const abrir = () => {
+          if (!inp.disabled && typeof inp.showPicker === 'function') {
+            try { inp.showPicker(); } catch (e) { /* gesto no válido: ignora */ }
+          }
+        };
+        inp.addEventListener('focus', abrir);
+        inp.addEventListener('click', abrir);
+
+        inp.addEventListener('input', () => {
+          const t = inp.value.trim();
+          config[k] = t === '' ? null : t;
+          inp.classList.toggle('filled', t !== '');
+          validarConfig();
+        });
+      });
+    })();
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // BANDA DE BOTONES (panel 12/15 · puerta sí/no) — selección única por grupo
+    // ═══════════════════════════════════════════════════════════════
+    (function () {
+      document.querySelectorAll('.rk-banda-grupo').forEach(grupo => {
+        const key  = { panel:'panel', puerta:'llevaPuerta', sistema:'sistema' }[grupo.dataset.banda];
+        const btns = grupo.querySelectorAll('.rk-bigbtn');
+        btns.forEach(btn => {
+          btn.addEventListener('click', () => {
+            btns.forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            config[key] = (key === 'panel')
+              ? parseInt(btn.dataset.valor, 10)
+              : btn.dataset.valor;
+            if (key === 'sistema') actualizarRangoAncho();
+            validarConfig();
+          });
+        });
+      });
+    })();
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // VALIDACIÓN GENERAL → habilita el botón Siguiente
+    // ═══════════════════════════════════════════════════════════════
+    function validarConfig() {
+      const completo =
+        config.panel           != null &&
+        config.llevaPuerta     != null &&
+        config.sistema         != null &&
+        config.anchoPuerta     != null &&
+        config.alturaPuerta    != null &&
+        config.tipoRasomuro    != null &&
+        config.cierre          != null &&
+        config.acabado         != null &&
+        config.cantidadPuertas != null &&
+        config.apertura        != null;
+
+      // Si el herraje especial está activo, los 3 combos deben tener valor
+      const herrajeOk = !config.herrajeEspecial ||
+        (config.cerradura != null && config.cerradero != null && config.bisagras != null);
+
+      document.getElementById('btnSiguiente').disabled = !(completo && herrajeOk);
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════
+    // INFORME MRN — mapeos, precios (CSV), navegación y PDF
+    // ═══════════════════════════════════════════════════════════════
+
+    // --- Tablas de mapeo (form → catálogo) ---
+    const COD_ALTURA = { 2030:'03', 2110:'11', 2300:'23', 2500:'25', 2700:'27' };
+    const COD_ANCHO  = { 725:'72', 825:'82', 925:'92', 1025:'102' };
+    const ALTURAS_AJUSTABLES = [2300, 2500, 2700];  // para altura libre
+
+    const TXT_CABECERO = { recto:'Cabecero recto', escalonado:'Escalonado', sincabecero:'Sin cabecero' };
+    const TXT_CIERRE   = { cilindro:'Cilindro', condena:'Condena' };
+    const TXT_COLOR    = { blanco:'Blanco', negro:'Negro', plata:'Plata', bronce:'Bronce' };
+    const TXT_APERT    = { izquierda:'Izquierda', derecha:'Derecha' };
+
+    // Altura de catálogo a partir de la altura de puerta seleccionada.
+    // 2030 y 2110 son fijas; el resto (libre) sube a la ajustable inmediata superior.
+    function alturaCatalogo(alto) {
+      if (alto === 2030 || alto === 2110) return alto;
+      for (const a of ALTURAS_AJUSTABLES) if (alto <= a) return a;
+      return 2700; // por encima no debería llegar (input limitado)
+    }
+
+    // --- Carga del CSV de precios (una sola vez, cacheado) ---
+    // Columnas: 0 Code · 1 Denominación · 2 Serie · 3 Acabado · 4 Cierre ·
+    //           5 Cabecero · 6 NumBis · 7 Alto · 8 Ancho · 9 Tarifa
+    const CSV_URL = 'https://jdurba.github.io/Rasomuro/RasomuroPrecios.csv';
+    let catalogoMap  = null;  // Code -> { desc, tarifa, numBis }
+    let catalogoFilas = null; // filas con código (para búsqueda por campos)
+
+    async function cargarCatalogo() {
+      if (catalogoMap) return catalogoMap;
+      const resp = await fetch(CSV_URL + '?v=' + Date.now());
+      if (!resp.ok) throw new Error('No se pudo cargar el CSV de precios');
+      const buf = await resp.arrayBuffer();
+      // El CSV está en ISO-8859-1
+      const texto = new TextDecoder('iso-8859-1').decode(buf);
+      catalogoMap   = {};
+      catalogoFilas = [];
+      const lineas = texto.split(/\r?\n/);
+      for (let i = 1; i < lineas.length; i++) {      // salta cabecera
+        const l = lineas[i].trim();
+        if (!l) continue;
+        const c = l.split(';');
+        const code = c[0].trim();
+        if (!code) continue;
+        const fila = {
+          code,
+          desc:    (c[1] || '').trim(),
+          serie:   (c[2] || '').trim(),
+          acabado: (c[3] || '').trim(),
+          cierre:  (c[4] || '').trim(),
+          numBis:  (c[6] || '').trim(),
+          tarifa:  (c[9] || '').trim()
+        };
+        catalogoMap[code] = fila;
+        catalogoFilas.push(fila);
+      }
+      return catalogoMap;
+    }
+
+    // --- Construye las líneas de artículo a partir del config ---
+    // Pedido MRN = 3 líneas:
+    //   1) Block marco+puerta (única línea con tarifa)
+    //   2) Bisagras (nº según NumBis del block; se identifican por Cierre="Bisagra")
+    //   3) Cerradura (según cierre + acabado)
+    function calcularArticulos() {
+      const cant    = config.cantidadPuertas;
+      const altoCat = alturaCatalogo(config.alturaPuerta);
+
+      // 1) Block: MRN con cabecero recto / MRNS sin cabecero
+      const prefijo  = (config.tipoRasomuro === 'sincabecero') ? 'MRNS' : 'MRN';
+      const codBlock = `${prefijo}.${COD_ALTURA[altoCat]}.${COD_ANCHO[config.anchoPuerta]}`;
+      const block    = catalogoMap[codBlock] || { desc:'(no encontrado)', tarifa:'', numBis:'' };
+      const nBis     = parseInt(block.numBis, 10) || (altoCat >= 2500 ? 4 : 3);
+
+      // 2) Bisagra y 3) cerradura: búsqueda por campos (Serie/Cierre/Acabado)
+      const acabTxt  = TXT_COLOR[config.acabado];
+      const filaBis  = catalogoFilas.find(f =>
+        f.serie === 'MRN' && f.cierre === 'Bisagra' && f.acabado === acabTxt);
+      const filaCerr = catalogoFilas.find(f =>
+        f.serie === 'MRN' && f.cierre === TXT_CIERRE[config.cierre] && f.acabado === acabTxt);
+
+      const linea = (fila, code, unidades) => {
+        const item = fila || { code, desc:'(no encontrado)', tarifa:'' };
+        const precioUnit = item.tarifa === '' ? null : parseFloat(item.tarifa.replace(',', '.'));
+        return {
+          code: item.code || code,
+          desc: item.desc,
+          cant: unidades,
+          precioUnit,
+          precioTotal: precioUnit == null ? null : precioUnit * unidades
+        };
+      };
+
+      // Línea de observaciones (para el campo Observaciones del pedido Odoo).
+      // Sin código ni precio; medida REAL de puerta (alto x ancho) + apertura.
+      const obs = {
+        esObs: true,
+        texto: `Medidas reales puerta ${config.alturaPuerta} x ${config.anchoPuerta} mm · Apertura ${TXT_APERT[config.apertura].toLowerCase()}`
+      };
+
+      return [
+        linea(block.desc ? block : null, codBlock, cant),
+        obs,
+        linea(filaBis,  'MR.BB.?',  nBis * cant),
+        linea(filaCerr, 'MR.CB.?',  cant)
+      ];
+    }
+
+    // --- Render del informe en pantalla ---
+    function fmtEuro(n) {
+      return n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    }
+
+    function pintarInforme(articulos) {
+      // Fecha y versión
+      document.getElementById('informeFecha').textContent =
+        new Date().toLocaleDateString('es-ES');
+      document.getElementById('informeVersion').textContent =
+        window.VERSION_APP ? 'Adinor · Rasomuro MRE · ' + window.VERSION_APP : 'Adinor · Rasomuro MRE';
+
+      // Parámetros — etiqueta izq / valor der, agrupados en filas
+      const dato = (l, v) =>
+        `<div class="campo-informe"><label>${l}</label><span class="valor">${v}</span></div>`;
+
+      document.getElementById('informeDatos').innerHTML = `
+        <div class="mrk-param-fila cols-2">
+          ${dato('Ancho de puerta', config.anchoPuerta + ' mm')}
+          ${dato('Ancho luz de obra', config.anchoLuzObra + ' mm')}
+        </div>
+        <div class="mrk-param-fila cols-2">
+          ${dato('Alto de puerta', config.alturaPuerta + ' mm')}
+          ${dato('Alto luz de obra', config.alturaLuzObra + ' mm')}
+        </div>
+        <div class="mrk-param-fila cols-3">
+          ${dato('Cabecero', TXT_CABECERO[config.tipoRasomuro])}
+          ${dato('Cierre', TXT_CIERRE[config.cierre])}
+          ${dato('Acabado', TXT_COLOR[config.acabado])}
+        </div>
+        <div class="mrk-param-fila cols-1">
+          ${dato('Apertura', TXT_APERT[config.apertura])}
+          ${dato('Cantidad', config.cantidadPuertas + ' ud.')}
+        </div>`;
+
+      // Artículos. Filas con código llevan botón copiar (solo pantalla);
+      // la fila de observaciones ocupa las columnas de datos y también copia.
+      const btnCopia = (valor) =>
+        `<button type="button" class="btn-copia" data-copia="${valor.replace(/"/g, '&quot;')}"
+                 title="Copiar" data-html2canvas-ignore>📋</button>`;
+
+      document.getElementById('informeArticulos').innerHTML = articulos.map(a => {
+        if (a.esObs) {
+          return `<tr class="obs">
+            <td class="copia" data-html2canvas-ignore>${btnCopia(a.texto)}</td>
+            <td></td>
+            <td colspan="3">${a.texto}</td>
+          </tr>`;
+        }
+        const precioCel = a.precioTotal == null
+          ? '<span class="incluido">incluido</span>'
+          : fmtEuro(a.precioTotal);
+        return `<tr>
+          <td class="copia" data-html2canvas-ignore>${btnCopia(a.code)}</td>
+          <td class="cod">${a.code}</td>
+          <td>${a.desc}</td>
+          <td class="num">${a.cant}</td>
+          <td class="num">${precioCel}</td>
+        </tr>`;
+      }).join('');
+
+      // Delegación: copiar al portapapeles con feedback ✓
+      const tbody = document.getElementById('informeArticulos');
+      tbody.onclick = (e) => {
+        const btn = e.target.closest('.btn-copia');
+        if (!btn) return;
+        const texto = btn.dataset.copia;
+        const ok = () => {
+          const orig = btn.textContent;
+          btn.textContent = '✓'; btn.classList.add('ok');
+          setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 1200);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(texto).then(ok).catch(() => fallbackCopia(texto, ok));
+        } else {
+          fallbackCopia(texto, ok);
+        }
+      };
+
+      // Total (la fila obs no tiene precioTotal → no suma)
+      const total = articulos.reduce((s, a) => s + (a.precioTotal || 0), 0);
+      document.getElementById('informeTotal').textContent = fmtEuro(total);
+    }
+
+    // Copia de respaldo si el navegador no expone navigator.clipboard
+    function fallbackCopia(texto, onOk) {
+      const ta = document.createElement('textarea');
+      ta.value = texto;
+      ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); if (onOk) onOk(); } catch (_) {}
+      document.body.removeChild(ta);
+    }
+
+    let articulosActuales = [];
+
+    // ═══════════════════════════════════════════════════════════════
+    // NAVEGACIÓN form1 ↔ informe
+    // ═══════════════════════════════════════════════════════════════
+    const barraInforme = document.getElementById('barra-informe');
+    const form1 = document.getElementById('form1');
+    const form2 = document.getElementById('form2');
+
+    function mostrarForm1() {
+      form2.style.display = 'none';
+      barraInforme.classList.remove('visible');
+      document.body.classList.remove('informe-activo');
+      form1.style.display = '';
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+
+    async function mostrarInforme() {
+      try {
+        await cargarCatalogo();
+      } catch (e) {
+        aviso('No se pudieron cargar los precios.\n' + e.message);
+        return;
+      }
+      articulosActuales = calcularArticulos();
+      pintarInforme(articulosActuales);
+      form1.style.display = 'none';
+      document.body.classList.add('informe-activo');
+      barraInforme.classList.add('visible');
+      form2.style.display = 'block';
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+
+    document.getElementById('btnSiguiente').addEventListener('click', mostrarInforme);
+    document.getElementById('btnAtras').addEventListener('click', mostrarForm1);
+    document.getElementById('btnNueva').addEventListener('click', () => {
+      confirmar('¿Iniciar una nueva configuración?\nSe perderán los datos actuales.', () => {
+        location.reload();
+      });
+    });
+
+    // ═══════════════════════════════════════════════════════════════
+    // GENERACIÓN DE PDF (captura fiel del informe A4 con html2canvas)
+    // ═══════════════════════════════════════════════════════════════
+    document.getElementById('btnPDF').addEventListener('click', generarPDF);
+
+    async function generarPDF() {
+      const btn = document.getElementById('btnPDF');
+      const textoOrig = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Generando…';
+
+      try {
+        const { jsPDF } = window.jspdf;
+        const hoja = document.getElementById('informe-container');
+
+        // Captura la hoja tal como se ve (fondo blanco, escala 2 = nitidez)
+        const canvas = await html2canvas(hoja, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff'
+        });
+
+        const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+        const pw = pdf.internal.pageSize.getWidth();    // 210
+        const ph = pdf.internal.pageSize.getHeight();   // 297
+        const imgW = pw;
+        const imgH = canvas.height * pw / canvas.width;
+
+        const imgData = canvas.toDataURL('image/jpeg', 0.92);
+
+        // Si la hoja cabe en una página, una sola; si no, pagina.
+        if (imgH <= ph) {
+          pdf.addImage(imgData, 'JPEG', 0, 0, imgW, imgH);
+        } else {
+          let restante = imgH;
+          let posicion = 0;
+          while (restante > 0) {
+            pdf.addImage(imgData, 'JPEG', 0, posicion, imgW, imgH);
+            restante -= ph;
+            if (restante > 0) { pdf.addPage(); posicion -= ph; }
+          }
+        }
+
+        pdf.save(`Rasomuro_MRE_${config.anchoPuerta}x${config.alturaPuerta}.pdf`);
+      } catch (e) {
+        aviso('No se pudo generar el PDF.\n' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = textoOrig;
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // ARRANQUE
+    // ═══════════════════════════════════════════════════════════════
+    function pintarAperturaNeutra() {
+      document.getElementById('aperturaDibujo').innerHTML =
+        `<img src="${IMG_APERTURA_NEUTRA}" alt="Apertura">`;
+    }
+    pintarAperturaNeutra();
+
+    // Descripción de la variante (banda form1 + nota informe/PDF)
+    document.getElementById('descVariante').textContent = DESC_VARIANTE;
+    document.getElementById('informeDescVariante').textContent = DESC_VARIANTE;
+
+  </script>
+
+</body>
+</html>
