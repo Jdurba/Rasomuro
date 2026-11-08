@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Perfil Rasomuro — Kit 2300</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ui-bg:rgba(250,250,248,.82); --ui-fg:#2b2f33; --ui-line:#c9ccd0; --ui-on:#2b2f33; --ui-on-fg:#f6f6f4;
+  color-scheme:light;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){ --ui-bg:rgba(32,35,38,.82); --ui-fg:#e8e9ea; --ui-line:#4a4f55; --ui-on:#e8e9ea; --ui-on-fg:#202326; color-scheme:dark; }
+}
+:root[data-theme="dark"]{ --ui-bg:rgba(32,35,38,.82); --ui-fg:#e8e9ea; --ui-line:#4a4f55; --ui-on:#e8e9ea; --ui-on-fg:#202326; color-scheme:dark; }
+html,body{margin:0;height:100%;overflow:hidden;background:#bfc3c8;font-family:"Barlow",system-ui,"Segoe UI",Arial,sans-serif}
+canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+canvas:active{cursor:grabbing}
+#ui{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;gap:6px;
+  padding:6px;border-radius:10px;background:var(--ui-bg);border:1px solid var(--ui-line);backdrop-filter:blur(8px);max-width:calc(100% - 32px)}
+#ui button{font:600 14px/1 inherit;font-family:inherit;color:var(--ui-fg);background:transparent;border:0;border-radius:6px;padding:9px 12px;cursor:pointer}
+#ui button:hover{background:rgba(127,127,127,.15)}
+#ui button[aria-pressed="true"]{background:var(--ui-on);color:var(--ui-on-fg)}
+#ui button:focus-visible{outline:2px solid #3b82c4;outline-offset:2px}
+body.limpio #ui{display:none}
+</style>
+</head>
+<body>
+<div id="ui" role="toolbar" aria-label="Vistas">
+  <button data-v="general" aria-pressed="true">General</button>
+  <button data-v="seccion">Sección</button>
+  <button data-v="bisagra">Coliso bisagra</button>
+  <button data-v="cerradero">Coliso cerradero</button>
+  <button id="ocultar" title="Tecla H">Ocultar interfaz</button>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ================= GEOMETRÍA (reutilizable) =================
+   Unidades: mm. Sección: x = ancho (0 = cara exterior pared con estrías, aleta hacia +x),
+   y = profundidad (cara mecanizada en y = 29.4), z = longitud.
+   La pared de la cara mecanizada se modela aparte (placa) para poder vaciar los colisos. */
+const SECCION = {"outer":[[0.0,0.0],[0.0,1.246],[-0.852,0.198],[-1.348,0.602],[-0.048,2.202],[0.0,2.163],[0.0,3.981],[-0.858,2.99],[-1.342,3.41],[-0.223,4.7],[-1.342,5.99],[-0.858,6.41],[0.0,5.419],[0.0,9.881],[-0.858,8.89],[-1.342,9.31],[-0.223,10.6],[-1.342,11.89],[-0.858,12.31],[0.0,11.319],[0.0,15.881],[-0.858,14.89],[-1.342,15.31],[-0.223,16.6],[-1.342,17.89],[-0.858,18.31],[0.0,17.319],[0.0,21.881],[-0.858,20.89],[-1.342,21.31],[-0.223,22.6],[-1.342,23.89],[-0.858,24.31],[0.0,23.319],[0.0,27.8],[1.8,27.8],[1.8,20.0],[9.6,24.0],[22.0,24.0],[29.8,20.0],[29.8,27.8],[31.6,27.8],[31.6,24.0],[33.6,24.0],[33.6,39.5],[43.6,39.5],[43.6,38.0],[42.4,38.0],[42.4,37.0],[41.4,37.0],[41.4,38.0],[38.4,38.0],[38.4,37.0],[37.4,37.0],[37.4,38.0],[35.6,38.0],[35.6,32.6],[39.2,32.6],[39.2,33.0],[40.4,33.0],[40.4,31.0],[39.2,31.0],[39.2,31.6],[35.6,31.6],[35.6,28.2],[38.2,28.2],[38.2,26.3],[37.2,26.3],[37.2,27.0],[35.6,27.0],[35.6,22.6],[37.6,22.6],[37.6,21.7],[31.6,21.7],[31.6,0.0],[26.2,0.0],[26.2,1.6],[29.8,1.6],[29.8,4.8],[1.8,4.8],[1.8,1.6],[6.4,1.6],[6.4,0.0]],"holes":[[[22.6,21.6],[9.0,21.6],[1.8,18.0],[1.8,6.6],[29.8,6.6],[29.8,18.0]]]};
+const CARA = { x0:-1.4, x1:31.6, y0:27.8, y1:29.4, ejeColiso:15.8 };
+
+function shapeDesde(puntos){
+  const s = new THREE.Shape();
+  puntos.forEach((p,i)=> i ? s.lineTo(p[0],p[1]) : s.moveTo(p[0],p[1]));
+  s.closePath(); return s;
+}
+function pathColiso(cx, cz, largo, ancho){
+  const r = ancho/2, h = largo/2 - r, p = new THREE.Path();
+  p.moveTo(cx + r, cz - h);
+  p.lineTo(cx + r, cz + h);
+  p.absarc(cx, cz + h, r, 0, Math.PI, false);
+  p.lineTo(cx - r, cz - h);
+  p.absarc(cx, cz - h, r, Math.PI, 2*Math.PI, false);
+  return p;
+}
+
+/* colisos: [{desdeArriba, largo, ancho}] ; devuelve Group en mm, de pie:
+   Y = longitud (0..L), cara mecanizada hacia +Z, aleta hacia -X */
+function crearPerfil({ longitud, colisos = [], material }){
+  const L = longitud;
+  const cuerpo = shapeDesde(SECCION.outer);
+  SECCION.holes.forEach(h => cuerpo.holes.push(shapeDesde(h)));
+  const gCuerpo = new THREE.ExtrudeGeometry(cuerpo, { depth:L, bevelEnabled:false, curveSegments:2 });
+
+  const placa = shapeDesde([[CARA.x0,0],[CARA.x1,0],[CARA.x1,L],[CARA.x0,L]]);
+  colisos.forEach(c => placa.holes.push(pathColiso(CARA.ejeColiso, L - c.desdeArriba, c.largo, c.ancho)));
+  const gPlaca = new THREE.ExtrudeGeometry(placa, { depth:CARA.y1 - CARA.y0, bevelEnabled:false, curveSegments:32 });
+  gPlaca.rotateX(Math.PI/2);            // (a,b,c) -> (a,-c,b)
+  gPlaca.translate(0, CARA.y1, 0);
+
+  const base = new THREE.Group();
+  base.matrixAutoUpdate = false;
+  base.matrix.set(-1,0,0,0, 0,0,1,0, 0,1,0,0, 0,0,0,1);   // (x,y,z) -> (-x, z, y)
+  [gCuerpo, gPlaca].forEach(g => {
+    const m = new THREE.Mesh(g, material);
+    m.castShadow = m.receiveShadow = true;
+    base.add(m);
+  });
+  const perfil = new THREE.Group();
+  perfil.add(base);
+  perfil.userData = { longitud:L, colisos };
+  return perfil;
+}
+
+/* ================= ESCENA ================= */
+const renderer = new THREE.WebGLRenderer({ antialias:true, preserveDrawingBuffer:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.9;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.prepend(renderer.domElement);
+
+const FONDO = 0xbfc3c8;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(FONDO);
+scene.fog = new THREE.Fog(FONDO, 7, 16);
+
+// Entorno de estudio para reflejos (softbox)
+(function(){
+  const env = new THREE.Scene();
+  const sala = new THREE.Mesh(new THREE.BoxGeometry(20,10,20), new THREE.MeshBasicMaterial({ color:0x2c2f33, side:THREE.BackSide }));
+  sala.position.y = 4; env.add(sala);
+  const panel = (w,h,int,pos,look) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w,h), new THREE.MeshBasicMaterial({ color:new THREE.Color(1,1,1).multiplyScalar(int), side:THREE.DoubleSide }));
+    m.position.set(...pos); m.lookAt(...look); env.add(m);
+  };
+  panel(5,2.5,5,[0,8.5,0],[0,0,0]);
+  panel(2.5,6,3.5,[-8,4,3],[0,2,0]);
+  panel(2,6,1.2,[8,4,4],[0,2,0]);
+  panel(6,1.5,0.6,[0,3,-9],[0,2,0]);
+  const pm = new THREE.PMREMGenerator(renderer);
+  scene.environment = pm.fromScene(env, 0.03).texture;
+  pm.dispose();
+})();
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8d9196, 0.25));
+const sol = new THREE.DirectionalLight(0xfffaf2, 2.1);
+sol.position.set(-2.2, 4.5, 3.2);
+sol.target.position.set(0, 1.1, 0);
+sol.castShadow = true;
+sol.shadow.mapSize.set(4096, 4096);
+Object.assign(sol.shadow.camera, { left:-1.6, right:1.6, top:1.8, bottom:-1.8, near:0.5, far:12 });
+sol.shadow.bias = -0.0002;
+sol.shadow.normalBias = 0.0015;
+sol.shadow.radius = 4;
+scene.add(sol, sol.target);
+
+const suelo = new THREE.Mesh(new THREE.PlaneGeometry(60,60), new THREE.MeshStandardMaterial({ color:0xb4b8bd, roughness:0.95 }));
+suelo.rotation.x = -Math.PI/2; suelo.receiveShadow = true; scene.add(suelo);
+
+// Lacado blanco (RAL 9016 aprox.)
+const blanco = new THREE.MeshPhysicalMaterial({
+  color:0xf2f2ee, roughness:0.38, metalness:0.0, clearcoat:0.55, clearcoatRoughness:0.22, envMapIntensity:0.75
+});
+
+/* ================= PERFILES (Kit 2300) ================= */
+const mundo = new THREE.Group(); mundo.scale.setScalar(0.001); scene.add(mundo);   // mm -> m
+const SEP = 250;   // mm desde el centro a cada perfil
+
+const bisagras = crearPerfil({ longitud:2310, material:blanco, colisos:[
+  { desdeArriba:205,  largo:128, ancho:22 },
+  { desdeArriba:1155, largo:128, ancho:22 },
+  { desdeArriba:2105, largo:128, ancho:22 } ]});
+bisagras.position.set(-SEP + CARA.ejeColiso, 0, 0);
+bisagras.name = 'bisagras';
+
+const cerradero = crearPerfil({ longitud:2600, material:blanco, colisos:[
+  { desdeArriba:1300, largo:68, ancho:18 } ]});
+cerradero.rotation.z = Math.PI;                 // mismo perfil girado: aleta al lado contrario
+cerradero.position.set(SEP - CARA.ejeColiso, 2600, 0);
+cerradero.name = 'cerradero';
+
+mundo.add(bisagras, cerradero);
+
+/* ================= CÁMARA Y CONTROL ================= */
+const camera = new THREE.PerspectiveCamera(35, 1, 0.004, 60);
+const target = new THREE.Vector3();
+const VISTAS = {
+  general:   { pos:[1.35,1.45,4.3],     tgt:[0,1.25,0] },
+  seccion:   { pos:[-0.17,2.385,0.13],  tgt:[-0.248,2.30,0.012] },
+  bisagra:   { pos:[-0.06,2.19,0.36],   tgt:[-0.25,2.105,0.03] },
+  cerradero: { pos:[0.44,1.38,0.34],    tgt:[0.25,1.30,0.03] }
+};
+camera.position.set(...VISTAS.general.pos); target.set(...VISTAS.general.tgt); camera.lookAt(target);
+
+let pedir = true; const render = () => { pedir = true; };
+const sph = new THREE.Spherical(), tmp = new THREE.Vector3();
+function orbitar(dx, dy){
+  tmp.copy(camera.position).sub(target); sph.setFromVector3(tmp);
+  sph.theta -= dx * 0.005; sph.phi = Math.min(Math.PI - 0.05, Math.max(0.05, sph.phi - dy * 0.005));
+  tmp.setFromSpherical(sph); camera.position.copy(target).add(tmp); camera.lookAt(target);
+}
+function desplazar(dx, dy){
+  const d = camera.position.distanceTo(target) * Math.tan(THREE.MathUtils.degToRad(camera.fov/2)) * 2 / renderer.domElement.clientHeight;
+  const x = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 0).multiplyScalar(-dx * d);
+  const y = new THREE.Vector3().setFromMatrixColumn(camera.matrix, 1).multiplyScalar(dy * d);
+  camera.position.add(x).add(y); target.add(x).add(y);
+}
+function acercar(f){
+  tmp.copy(camera.position).sub(target);
+  const r = Math.min(12, Math.max(0.03, tmp.length() * f));
+  camera.position.copy(target).add(tmp.setLength(r));
+}
+const punteros = new Map(); let pinch = 0, modoPan = false;
+const cv = renderer.domElement;
+cv.addEventListener('contextmenu', e => e.preventDefault());
+cv.addEventListener('pointerdown', e => {
+  cv.setPointerCapture(e.pointerId); punteros.set(e.pointerId, { x:e.clientX, y:e.clientY });
+  modoPan = e.button === 2 || e.shiftKey; anim = null;
+  if (punteros.size === 2){ const [a,b] = [...punteros.values()]; pinch = Math.hypot(a.x-b.x, a.y-b.y); }
+});
+cv.addEventListener('pointermove', e => {
+  const p = punteros.get(e.pointerId); if (!p) return;
+  const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+  if (punteros.size === 2){
+    const [a,b] = [...punteros.values()], d = Math.hypot(a.x-b.x, a.y-b.y);
+    if (pinch) acercar(pinch / d); pinch = d; desplazar(dx/2, dy/2);
+  } else if (modoPan) desplazar(dx, dy); else orbitar(dx, dy);
+  marcar(null); render();
+});
+const fin = e => { punteros.delete(e.pointerId); pinch = 0; };
+cv.addEventListener('pointerup', fin); cv.addEventListener('pointercancel', fin);
+cv.addEventListener('wheel', e => { e.preventDefault(); anim = null; acercar(Math.exp(e.deltaY * 0.0012)); marcar(null); render(); }, { passive:false });
+
+/* Transición entre vistas */
+let anim = null;
+const reducir = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function irA(nombre, ms = 1300){
+  const v = VISTAS[nombre]; if (!v) return;
+  marcar(nombre);
+  const p0 = camera.position.clone(), t0 = target.clone();
+  const p1 = new THREE.Vector3(...v.pos), t1 = new THREE.Vector3(...v.tgt);
+  if (reducir || ms === 0){ camera.position.copy(p1); target.copy(t1); camera.lookAt(target); render(); return; }
+  anim = { p0, t0, p1, t1, ini:performance.now(), ms };
+}
+function marcar(n){ document.querySelectorAll('#ui [data-v]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === n))); }
+document.querySelectorAll('#ui [data-v]').forEach(b => b.addEventListener('click', () => irA(b.dataset.v)));
+const alternarUI = () => document.body.classList.toggle('limpio');
+document.getElementById('ocultar').addEventListener('click', alternarUI);
+addEventListener('keydown', e => { if (e.key === 'h' || e.key === 'H') alternarUI(); });
+
+function ajustar(){
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); render();
+}
+addEventListener('resize', ajustar); ajustar();
+
+(function bucle(t){
+  requestAnimationFrame(bucle);
+  if (anim){
+    let k = Math.min(1, (t - anim.ini) / anim.ms); const e = k < .5 ? 4*k*k*k : 1 - Math.pow(-2*k + 2, 3)/2;
+    camera.position.lerpVectors(anim.p0, anim.p1, e); target.lerpVectors(anim.t0, anim.t1, e); camera.lookAt(target);
+    pedir = true; if (k === 1) anim = null;
+  }
+  if (pedir){ renderer.render(scene, camera); pedir = false; }
+})(performance.now());
+
+/* API para el vídeo */
+window.ADN = { THREE, renderer, scene, camera, target, mundo, material:blanco,
+  perfiles:{ bisagras, cerradero }, SECCION, CARA, crearPerfil, VISTAS, irA, render };
+})();
+</script>
+</body>
+</html>
